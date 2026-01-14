@@ -1,0 +1,71 @@
+global:
+
+
+      mode: "redshift" # remove this one?
+
+      main_directory: 
+
+      save_results: True
+      save_directory: './results/'
+
+      frequency:
+            f_scale: "log10"
+            f_min: 1e-5 
+            f_max: 1
+            N_fbins: 50
+
+
+
+population:
+
+      catalogue_name: "mock_catalogue"
+
+      population_path: './data/Initials_SeBa_Gamma175Alpha4_Z02.txt'
+
+      considered_source: "white_dwarf"
+
+      total_population_mass: 4e6      # BH 2.592e5
+
+      population_metallicities: "Z0.02"
+
+
+
+cosmology:
+
+      # using standard cosmology or custom
+      standard: True
+
+      # included cosmologies are: Planck18, Planck15, Planck13, WMAP9, WMAP7, WMAP5, WMAP3, WMAP1 
+      standard_cosmology: "Planck18"
+
+      # custom cosmologies should named as in the astropy.cosmology module. e.g., from DESI+CMB+DESY5 table V of https://arxiv.org/pdf/2503.14738
+      custom_cosmology: 
+          cosmology_type: "w0waCDM"
+          params:
+              H0:        66.74
+              Om0:       0.3191
+              Ode0:      0.6809
+              w0:        -0.752
+              wa:        -0.86
+
+      z_scale: "linear"
+
+      z_power_scale: null
+
+      z_min: 1e-4
+
+      z_max: 8
+
+      N_zbins: 20
+
+
+
+SFR:
+
+      # currently only 'madau_and_dickinson' is implemented
+      SFR_name: 'madau_and_dickinson'
+
+      SFR_path:
+
+      SFR_metallicities: '0.02'
+
