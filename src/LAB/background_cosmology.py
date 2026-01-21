@@ -84,15 +84,16 @@ class BackgroundCosmology():
         self.z_vals: jax.Array = z_grid[1::2]
         self.z_bins: jax.Array = z_grid[::2]
 
-        self.DC_vals = jnp.asarray(self.cosmo.comoving_distance(self.z_vals).value) # in Mpc
+        comvingdistance_func = getattr(self.cosmo, "comoving_distance")
+        self.DC_vals = jnp.asarray(comvingdistance_func(self.z_vals).value) # in Mpc
+        self.z_widths = jnp.diff(jnp.array(comvingdistance_func(self.z_bins).value)) # in Mpc
 
-        self.z_widths = jnp.diff(jnp.array(self.cosmo.comoving_distance(self.z_bins).value))
+        lookbacktime_func = getattr(self.cosmo, "lookback_time")
+        lookback_times = jnp.array(lookbacktime_func(self.z_vals).value) * 1000 # in Myr
+        self.z_time_since_z_max = jnp.array(lookbacktime_func(self.z_max).value) * 1000 - lookback_times # in Myr
 
-        lookback_times = jnp.array(self.cosmo.lookback_time(self.z_vals).value * 1000) # in Myr
-
-        self.z_time_since_z_max: jax.Array = self.cosmo.lookback_time(self.z_max).value * 1000 - lookback_times # in Myr
-
-        self.ages: jax.Array = self.cosmo.age(0).value * 1000 - lookback_times # in Myr
+        age_func = getattr(self.cosmo, 'age')
+        self.ages = jnp.array(age_func(0).value) * 1000 - lookback_times # in Myr
 
     
 

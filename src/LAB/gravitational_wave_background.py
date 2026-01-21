@@ -10,7 +10,8 @@ from utils import *
 
 import h5py
 import os
-from typing import Tuple
+from typing import Tuple, cast
+from astropy.cosmology import FLRW
 
 MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -65,7 +66,8 @@ class GravitationalWaveBackground():
         """Removes binaries that will never reach the minimum frequency within the age of the considered universe. 
         """
 
-        max_age: jax.Array = self.cosmology.cosmo.lookback_time(self.cosmology.z_max).value * 1000 # in Myr
+        lookbacktime_func = getattr(self.cosmology.cosmo, "lookback_time")
+        max_age: jax.Array = jnp.array(lookbacktime_func(self.cosmology.z_max).value) * 1000 # in Myr
         tau_max: jax.Array = tau_GW(2*self.catalogue.nu0, self.f_min, self.catalogue.K_factor)
 
         mask: jax.Array = tau_max  < max_age # + self.catalogue.t0 not certain if this should be included, it is not in seppe's code
@@ -130,13 +132,13 @@ class GravitationalWaveBackground():
             f_high_zbin: jax.Array = f_high_obs * (1 + z)
 
             # mask to focus on systems that contribute to this bin
-            mask: bool = (2 * self.catalogue.nu0 <= f_low_zbin) & (2 * self.catalogue.numax >= f_high_zbin)
+            mask: jax.Array = (2 * self.catalogue.nu0 <= f_low_zbin) & (2 * self.catalogue.numax >= f_high_zbin)
 
             tau: jax.Array = tau_GW(2 * self.catalogue.nu0, f_high_zbin, self.catalogue.K_factor)
             time_since_ZAMS: jax.Array = tau + self.catalogue.t0
             
             # mask to only include systems that had time to evolve into the bin (i.e. not older than universe at max_z)
-            mask: bool = mask & (time_since_ZAMS <= t_max_z)
+            mask: jax.Array = mask & (time_since_ZAMS <= t_max_z)
 
             psi: jax.Array = self.SFH.delayed_SFH(age, time_since_ZAMS) 
             
@@ -194,9 +196,9 @@ class GravitationalWaveBackground():
             bin_idx = jnp.searchsorted(self.f_bins, f_birth_obs, side='right') - 1
 
             # mask for systems that are born within frequency range and are not older than universe at max_z
-            within_band: bool = (bin_idx >= 0) & (bin_idx < self.N_fbins)
-            age_OK: bool = (self.catalogue.t0 <= t_max_z)
-            mask: bool = within_band & age_OK
+            within_band: jax.Array = (bin_idx >= 0) & (bin_idx < self.N_fbins)
+            age_OK: jax.Array = (self.catalogue.t0 <= t_max_z)
+            mask: jax.Array = within_band & age_OK
 
             frequency_mapping = jnp.where(mask, bin_idx, 0)
             f_low_obs: jax.Array = self.f_bins[frequency_mapping]
@@ -207,7 +209,7 @@ class GravitationalWaveBackground():
             max_evolve_time: jax.Array = t_max_z - self.catalogue.t0
 
             # mask for systems that can reach the upper frequency edge within the time available
-            mask_reach_edge: bool = tau_to_upper_edge >= max_evolve_time
+            mask_reach_edge: jax.Array = tau_to_upper_edge >= max_evolve_time
             tau_in_bin = jnp.where(mask_reach_edge, max_evolve_time, tau_to_upper_edge)
 
             # calculating the reached frequency after evolving for tau_in_bin
@@ -217,7 +219,8 @@ class GravitationalWaveBackground():
                                                                 self.catalogue.K_factor),
                                     f_high_obs * (1 + z) * 0.5,
                                     )
-
+            nu_reached_zbin = nu_reached_zbin[0] if isinstance(nu_reached_zbin, tuple) else nu_reached_zbin
+            
             # calculate birth frequency factors
             nu_reached_zbin_23 = jnp.square(jnp.cbrt(nu_reached_zbin))
             nu0_23 = jnp.square(jnp.cbrt(self.catalogue.nu0))
@@ -282,22 +285,24 @@ class GravitationalWaveBackground():
                                                             evolve_time,
                                                             self.catalogue.K_factor))
             
+            f_now_zbin = f_now_zbin[0] if isinstance(f_now_zbin, tuple) else f_now_zbin
+            
             f_now_obs: jax.Array = f_now_zbin / (1 + z)
 
             bin_idx = jnp.searchsorted(self.f_bins, f_now_obs, side='right') - 1
 
             # mask for systems that merge within frequency range and binary is born
-            within_band: bool = (bin_idx >= 0) & (bin_idx < self.N_fbins)
-            binary_born: bool = (evolve_time >=0)
-            mask: bool = within_band & binary_born 
+            within_band: jax.Array = (bin_idx >= 0) & (bin_idx < self.N_fbins)
+            binary_born: jax.Array = (evolve_time >=0)
+            mask: jax.Array = (within_band & binary_born) 
 
             # Also not considering binaries that merge outside of the considered frequency range
-            mask: bool = mask & (f_now_obs <= 2 * self.catalogue.numax / (1+z))
+            mask: jax.Array = mask & (f_now_obs <= 2 * self.catalogue.numax / (1+z))
 
             # make sure that we do not overcount mergers that are included in the birth contribution
             f_low_obs: jax.Array = self.f_bins[jnp.where(mask, bin_idx, 0)]
             f_low_zbin: jax.Array = f_low_obs * (1 + z)
-            mask: bool = mask & (2 * self.catalogue.nu0 < f_low_zbin)
+            mask: jax.Array = mask & (2 * self.catalogue.nu0 < f_low_zbin)
 
             # Physics for the binaries that reached the merger
             tau_merged: jax.Array = self.catalogue.merger_time
@@ -322,6 +327,7 @@ class GravitationalWaveBackground():
                     tau_GW(f_low_zbin, 2 * self.catalogue.numax, self.catalogue.K_factor),
                     evolve_time - tau_non_merged
                 )
+            tau_in_bin = tau_in_bin[0] if isinstance(tau_in_bin, tuple) else tau_in_bin
 
             f_center_obs: jax.Array = self.f_vals[jnp.where(mask, bin_idx, 0)]
         

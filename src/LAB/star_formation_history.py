@@ -1,5 +1,6 @@
 import jax
 import jax.numpy as jnp
+from typing import Callable
 from astropy.cosmology import Cosmology
 
 
@@ -16,7 +17,9 @@ class StarFormationHistory():
         self._config: dict = config
 
         self.z_high_res = jnp.linspace(0, 12, int(1e4))
-        self.age_high_res = jnp.array(cosmo.age(self.z_high_res).value * 1000)  # in Myr
+        
+        age_func = getattr(cosmo, 'age')
+        self.age_high_res = jnp.array(age_func(self.z_high_res).value * 1000)  # in Myr
 
 
     def delayed_SFH(self, age: jax.Array, delay: jax.Array) -> jax.Array:
@@ -30,7 +33,7 @@ class StarFormationHistory():
             jax.Array: The delayed star formation history in Msol / yr / Mpc^3
         """
 
-        psi_at_z: function = getattr(self, self._config['SFR']['SFR_name'])
+        psi_at_z: Callable = getattr(self, self._config['SFR']['SFR_name'])
  
         age_at_star_formation: jax.Array = age - delay # in Myr
         

@@ -1,6 +1,6 @@
 import jax
 import jax.numpy as jnp
-from lisatools.utils.constants import *
+from lisatools.utils.constants import PI, G_SI, MSUN_SI, YRSID_SI, C_SI
 
 RSUN_SI: float = 695700000.0 # nominal solar radius in meters (agrees with astropy and wolframalpha value)
 
