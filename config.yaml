@@ -1,6 +1,5 @@
 global:
 
-
       mode: "redshift" # remove this one?
 
       main_directory: 

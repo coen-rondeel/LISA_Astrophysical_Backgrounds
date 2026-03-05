@@ -1,7 +1,7 @@
 import pandas as pd
 from pandas import DataFrame
 import jax.numpy as jnp
-from physics import *
+from .physics import *
 
 
 class ProprecessCatalogue():

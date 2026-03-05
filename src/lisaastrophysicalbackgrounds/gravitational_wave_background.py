@@ -2,11 +2,11 @@ import jax
 import jax.numpy as jnp
 jax.config.update("jax_enable_x64", True)
 
-from background_cosmology import BackgroundCosmology
-from preprocess_catalogue import ProprecessCatalogue
-from star_formation_history import StarFormationHistory
-from physics import *
-from utils import *
+from .background_cosmology import BackgroundCosmology
+from .preprocess_catalogue import ProprecessCatalogue
+from .star_formation_history import StarFormationHistory
+from .physics import *
+from .utils import *
 
 import h5py
 import os
