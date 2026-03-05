@@ -1,5 +1,7 @@
 import yaml
 import matplotlib.pyplot as plt
+from numpy.typing import ArrayLike
+from pathlib import Path
 
 def get_config(path):
     """
@@ -14,5 +16,8 @@ def get_config(path):
         return yaml.load(stream, yaml.FullLoader)
     
 
-def get_GWB_plot(frequencies, omega_f, save_path):
-    raise NotImplementedError("The plot function still needs to be implemented")
+def get_GWB_plot(frequencies: ArrayLike, omega_f: ArrayLike, save_path: Path):
+    plt.loglog(frequencies, omega_f)
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.close()
+    

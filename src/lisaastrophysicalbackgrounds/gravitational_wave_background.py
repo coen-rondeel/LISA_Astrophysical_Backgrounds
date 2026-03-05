@@ -9,12 +9,9 @@ from .physics import *
 from .utils import *
 
 import h5py
-import os
+from pathlib import Path
 from typing import Tuple, cast
 from astropy.cosmology import FLRW
-
-MAIN_DIR = os.path.dirname(os.path.abspath(__file__))
-
 
 
 class GravitationalWaveBackground():
@@ -24,13 +21,27 @@ class GravitationalWaveBackground():
         """Main class to calculate the gravitational wave background from a given catalogue of ultra-compact binaries.  
 
         Args:
-            config_file (str): Full path to the configuration file.
+            config_file (str): Full path to the configuration file. Every functionality assumes other paths are relative 
+                               to the config file, IF these paths are NOT absolute.
         """
+        
+        # Making sure that the file paths can be resolved correctly
+        config_path = Path(config_file).resolve()
+        config_dir = config_path.parent
 
-        os.chdir(MAIN_DIR)
+        self.config: dict = get_config(str(config_file))
 
-        self.config: dict = get_config(config_file)
+        pop_path = Path(self.config['population']['population_path'])
+        if not pop_path.is_absolute():
+            self.config['population']['population_path'] = str(config_dir / pop_path)
 
+        save_dir = Path(self.config['global']['save_directory'])
+        if not save_dir.is_absolute():
+            self.config['global']['save_directory'] = str(config_dir / save_dir)
+            
+        Path(self.config['global']['save_directory']).mkdir(parents=True, exist_ok=True)
+        
+        # Actual Initialization of the code
         self.get_frequencies()
         self.cosmology = BackgroundCosmology(self.config)
         self.catalogue = ProprecessCatalogue(self.config)
@@ -379,10 +390,11 @@ class GravitationalWaveBackground():
         """Saves the results of the gravitational wave background calculation to an HDF5 file and generates a plot.
         """
         print("Saving results at " + self.config['global']['save_directory'])
-        save_directory: str = self.config['global']['save_directory']
+        save_directory: Path = Path(self.config['global']['save_directory'])
         data_filename: str = f'{self.config['population']['catalogue_name']}_gwb_results.h5'
-
-        with h5py.File(save_directory + data_filename, 'w') as hf:
+        output_path: Path = save_directory / data_filename
+        
+        with h5py.File(output_path, 'w') as hf:
             frequency_data = hf.create_dataset('f_vals', data=self.f_vals)
             frequency_data.attrs['f_min'] = self.f_min
             frequency_data.attrs['f_max'] = self.f_max
@@ -403,7 +415,8 @@ class GravitationalWaveBackground():
             hf.create_dataset('N_sources_f', data=self.N_sources_f)
 
         plot_filename: str = f'GWB_for_{self.config['population']['catalogue_name']}_with_{self.config['SFR']['SFR_name']}.png'
-        get_GWB_plot(self.f_vals, self.omega_f, save_path=save_directory + plot_filename)
+        plot_path: Path = save_directory / plot_filename
+        get_GWB_plot(self.f_vals, self.omega_f, save_path=plot_path)
 
 
 
