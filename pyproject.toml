@@ -26,4 +26,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "src/LAB/__init__.py"
+path = "src/lisaastrophysicalbackgrounds/__init__.py"
