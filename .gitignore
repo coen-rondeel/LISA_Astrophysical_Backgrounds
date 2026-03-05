@@ -1,0 +1,30 @@
+# --- uv & Environments ---
+.venv/
+.python-version
+# uv.lock  # Uncomment this if you are building an App, leave ignored for a Library
+
+# --- Build & Distribution ---
+dist/
+build/
+*.egg-info/
+nosetests.xml
+coverage.xml
+*.protodevel
+
+# --- Python Bytecode & Cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- OS & IDE ---
+.DS_Store
+.vscode/
+.idea/
+
+# --- Secrets ---
+.env
+.env.*
