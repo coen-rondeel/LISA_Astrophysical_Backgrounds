@@ -1,5 +1,5 @@
 [project]
-name = "lisa-astrophysical-backgrounds"
+name = "lisaastrophysicalbackgrounds"
 version = "0.1.0"
 description = "This package can be used to create an astrophysical gravitational wave background for a specific star formation history and galaxy catalogue."
 readme = "README.md"
