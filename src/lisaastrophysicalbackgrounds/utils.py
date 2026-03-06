@@ -19,5 +19,7 @@ def get_config(path):
 def get_GWB_plot(frequencies: ArrayLike, omega_f: ArrayLike, save_path: Path):
     plt.loglog(frequencies, omega_f)
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.ylabel(r"GWB strength $\Omega_\rm{GW}(f)$")
+    plt.xlabel(r"Frequency $f$")
     plt.close()
     
