@@ -371,6 +371,29 @@ wheels = [
 ]
 
 [[package]]
+name = "gpubackendtools"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "matplotlib" },
+    { name = "numpy" },
+    { name = "nvidia-ml-py" },
+    { name = "platformdirs" },
+    { name = "pydantic" },
+    { name = "pyyaml" },
+    { name = "requests" },
+    { name = "rich" },
+    { name = "scipy" },
+    { name = "tqdm" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/9e/28/3b48be12be65a30345cc7a730393a11c13268b08542277ea80b212391222/gpubackendtools-0.1.1.tar.gz", hash = "sha256:1060381279e18d8cf8d61124f70b3a6ab6e73984876f0e57ea1209feb97a4fc1", size = 390445, upload-time = "2026-02-10T04:25:34.205Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/38/9e/d55b2f5ab56982c1f15d4b8fe80ba1fd7596c13313b10524bd803fa035fd/gpubackendtools-0.1.1-py3-none-any.whl", hash = "sha256:d6e934d5979d80dfd2aca4e7519b93e741d511d4215fb3206f670520c963072b", size = 46837, upload-time = "2026-02-10T04:25:32.839Z" },
+]
+
+[[package]]
 name = "h5py"
 version = "3.15.1"
 source = { registry = "https://pypi.org/simple" }
@@ -707,12 +730,14 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "astropy" },
+    { name = "gpubackendtools" },
     { name = "h5py" },
     { name = "ipykernel" },
     { name = "jax" },
     { name = "lisaanalysistools" },
     { name = "matplotlib" },
     { name = "pandas" },
+    { name = "pytest" },
 ]
 
 [package.dev-dependencies]
@@ -723,12 +748,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "astropy", specifier = ">=7.2.0" },
+    { name = "gpubackendtools", specifier = ">=0.1.1" },
     { name = "h5py", specifier = ">=3.15.1" },
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "jax" },
     { name = "lisaanalysistools", git = "https://github.com/mikekatz04/LISAanalysistools.git" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "pandas", specifier = ">=2.3.3" },
+    { name = "pytest", specifier = ">=9.0.2" },
 ]
 
 [package.metadata.requires-dev]

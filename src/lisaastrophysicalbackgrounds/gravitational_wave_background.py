@@ -81,7 +81,7 @@ class GravitationalWaveBackground():
         max_age: jax.Array = jnp.array(lookbacktime_func(self.cosmology.z_max).value) * 1000 # in Myr
         tau_max: jax.Array = tau_GW(2*self.catalogue.nu0, self.f_min, self.catalogue.K_factor)
 
-        mask: jax.Array = tau_max  < max_age # + self.catalogue.t0 not certain if this should be included, it is not in seppe's code
+        mask: jax.Array = tau_max  < max_age # + self.catalogue.t0 not certain if this should be included, it is not in seppe's code.
 
         self.catalogue.t0 = self.catalogue.t0[mask]
         self.catalogue.M_ch = self.catalogue.M_ch[mask]
@@ -100,13 +100,11 @@ class GravitationalWaveBackground():
         self.prefactor_bulk: float = 8.10e-9 / self.catalogue.total_population_mass
         self.prefactor_birth_merger: float = 1.28e-8 / self.catalogue.total_population_mass
 
-        print("Calculating gravitational wave background...")
         self.calculate_births()
         self.calculate_bulk()
         self.calculate_mergers()
 
         self.combine_contributions()
-        print("Calculation complete...")
 
         if self.config['global']['save_results']:
             self.save_results()
