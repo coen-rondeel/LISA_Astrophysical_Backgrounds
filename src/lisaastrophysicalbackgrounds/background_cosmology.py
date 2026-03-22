@@ -13,7 +13,7 @@ class BackgroundCosmology():
         Args:
             config (dict): The yaml imported configuration file as a dictionary.
         """
-        self.config: dict = config
+        self._config: dict = config
 
         self.get_cosmology()
         self.get_redshift_grid()
@@ -21,9 +21,9 @@ class BackgroundCosmology():
     def get_cosmology(self) -> None:
         """Gets the configuration definied cosmology from astropy.cosmology
         """
-        if self.config['cosmology']['standard']:
+        if self._config['cosmology']['standard']:
 
-            cosmo_name: str = self.config['cosmology']['standard_cosmology'] 
+            cosmo_name: str = self._config['cosmology']['standard_cosmology'] 
             
             with cosmo_module.default_cosmology.set(cosmo_name):
                 cosmo = cosmo_module.default_cosmology.get()
@@ -32,11 +32,11 @@ class BackgroundCosmology():
         
         else:
 
-            cosmo_name: str =  self.config['cosmology']['custom_cosmology']['cosmology_type']
+            cosmo_name: str =  self._config['cosmology']['custom_cosmology']['cosmology_type']
 
             CosmoClass = getattr(cosmo_module, cosmo_name)
 
-            cosmo = CosmoClass(**self.config['cosmology']['custom_cosmology']['params'])
+            cosmo = CosmoClass(**self._config['cosmology']['custom_cosmology']['params'])
 
             self.cosmo: Cosmology = cosmo
         
@@ -48,10 +48,10 @@ class BackgroundCosmology():
             TypeError: An unsupported z_power_scale is defined in the config file.
             ValueError: An unsupported z_scale is defined in the config file.
         """
-        self.z_min = float(self.config['cosmology']['z_min'])
-        self.z_max = float(self.config['cosmology']['z_max'])
-        self.N_zbins = int(float(self.config['cosmology']['N_zbins']))
-        self.z_scale: str = self.config['cosmology']['z_scale']
+        self.z_min = float(self._config['cosmology']['z_min'])
+        self.z_max = float(self._config['cosmology']['z_max'])
+        self.N_zbins = int(float(self._config['cosmology']['N_zbins']))
+        self.z_scale: str = self._config['cosmology']['z_scale']
 
         if self.z_scale == 'linear':
             z_grid = jnp.linspace(self.z_min, self.z_max, 2*self.N_zbins + 1)
@@ -63,7 +63,7 @@ class BackgroundCosmology():
             z_grid = jnp.logspace(jnp.log(self.z_min), jnp.log(self.z_max), 2*self.N_zbins + 1, base=jnp.e)
 
         elif self.z_scale == 'power':
-            self.z_power_scale: float = self.config['cosmology']['z_power_scale'] 
+            self.z_power_scale: float = self._config['cosmology']['z_power_scale'] 
 
             if not(jnp.isnan(self.z_power_scale)):
                 loga_factor = jnp.log(self.z_power_scale)

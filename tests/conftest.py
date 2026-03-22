@@ -51,7 +51,7 @@ def mock_project_dir(tmp_path: Path) -> Path:
             'z_scale': 'linear'
         },
         'population': {
-            'catalogue_name': 'Test_Catalogue',
+            'population_name': 'Test_Catalogue',
             'population_path': './data/mock_population.csv',
             'total_population_mass': 1.0e10
         },

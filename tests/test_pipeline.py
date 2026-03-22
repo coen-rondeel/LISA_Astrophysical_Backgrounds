@@ -18,7 +18,7 @@ def test_initialization_and_grids(mock_project_dir: Path) -> None:
     assert len(gwb.cosmology.z_vals) == N_zbins
     assert len(gwb.cosmology.z_bins) == N_zbins + 1
     
-    assert len(gwb.catalogue.M_ch) > 0
+    assert len(gwb.population.M_ch) > 0
 
 
 # Since 'get_GWB_plot' currently raises NotImplementedError, we mock (bypass) it 
