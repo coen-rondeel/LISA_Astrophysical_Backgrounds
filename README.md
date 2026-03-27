@@ -80,5 +80,5 @@ Contributions, issues, and feature requests are welcome!
 When contributing, please ensure that `jax` compatibility is maintained. 
 
 ## License
-Project License is to be determined, but can later be found in the LICENSE file for details.
+The License is the APACHE license. For more information refer to the LICENSE.txt file.
 
