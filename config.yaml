@@ -1,11 +1,8 @@
 global:
 
-      mode: "redshift" # remove this one?
-
-      main_directory: 
-
       save_results: True
-      save_directory: './results/'
+
+      save_directory: "./results/"
 
       frequency:
             f_scale: "log10"
@@ -17,15 +14,17 @@ global:
 
 population:
 
-      catalogue_name: "mock_catalogue"
+      population_name: "mock_catalogue"
+      
+      population_import_name: "simple_single_Z_import"
 
-      population_path: './data/Initials_SeBa_Gamma175Alpha4_Z02.txt'
+      population_path: "./data/Initials_SeBa_Gamma175Alpha4_Z02.txt"
 
       considered_source: "white_dwarf"
 
       total_population_mass: 4e6      # BH 2.592e5
 
-      population_metallicities: "Z0.02"
+      population_metallicities: 0.02
 
 
 
@@ -59,12 +58,12 @@ cosmology:
 
 
 
-SFR:
+SFH:
 
-      # currently only 'madau_and_dickinson' is implemented
-      SFR_name: 'madau_and_dickinson'
+      # currently only "madau_and_dickinson" is implemented
+      SFH_name: "madau_and_dickinson"
 
-      SFR_path:
+      SFH_path:
 
-      SFR_metallicities: '0.02'
+      SFH_metallicities: 0.02
 
