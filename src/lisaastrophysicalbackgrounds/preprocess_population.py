@@ -44,6 +44,12 @@ class PreprocessPopulation():
         if population_import_name is not None:
             import_func = getattr(self, population_import_name)
             import_func()
+        else:
+            print("No population importer was defined in the config file.")
+            print("To continue with manual imports:\n\
+                  Set GravitationalWaveBackground.population = PreprocessPopulation(t0, m1, m2, a, Z)\n\
+                  Run GravitationalWaveBackground.clean_population()")
+            raise ValueError("Population import and pre-processing was stopped")
         
     
     def check_parameters(self) -> None:

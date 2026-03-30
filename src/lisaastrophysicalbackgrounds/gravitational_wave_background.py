@@ -43,9 +43,9 @@ class GravitationalWaveBackground():
         #* Actual Initialization of the code
         self.get_frequencies()
         self.cosmology = BackgroundCosmology(self.config)
-        self.population = PreprocessPopulation(self.config)
         self.SFH = StarFormationHistory(self.config, self.cosmology.cosmo)
-
+        
+        self.population = PreprocessPopulation(self.config)
         self.clean_population()
 
 
@@ -100,7 +100,7 @@ class GravitationalWaveBackground():
         """Main function to calculate the gravitational wave background from the population.
         """
     
-        #? Do we the ability to handle multiple total_population_masses?
+        #? Do we need the ability to handle multiple total_population_masses?
         self.prefactor_bulk: float = 8.10e-9 / self.population.total_population_mass
         self.prefactor_birth_merger: float = 1.28e-8 / self.population.total_population_mass
 
