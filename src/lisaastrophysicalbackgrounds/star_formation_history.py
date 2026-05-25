@@ -37,8 +37,8 @@ class StarFormationHistory():
     def get_metallicities(self) -> None:
         """Sets up the metallicity grid using the config file is N_Zs > 1.
         """
-        self.SFH_Zs = jnp.atleast_1d(self._config["SFH"]["SFH_metallicities"])
-        self.SFH_Z_bins = jnp.atleast_1d(self._config["SFH"]["SFH_metallicity_bins"])
+        self.SFH_Zs = jnp.atleast_1d(jnp.array(self._config["SFH"]["SFH_metallicities"]))
+        self.SFH_Z_bins = jnp.atleast_1d(jnp.array(self._config["SFH"]["SFH_metallicity_bins"]))
         
         if len(self.SFH_Zs) > 1:
             assert len(self.SFH_Z_bins) == len(self.SFH_Zs) + 1, "Metallicity grid not initiallized correctly, please check."
@@ -58,20 +58,23 @@ class StarFormationHistory():
             jax.Array: The delayed star formation history in Msol / yr / Mpc^3
         """ 
         age_at_star_formation: jax.Array = age - delay # in Myr
-        
+
         z_at_star_formation = jnp.interp(age_at_star_formation, self._flip_age, self._flip_z)
+
+        if self._config['SFH']['SFH_name'] == 'strolger':
+            return self._psi_function(age_at_star_formation, z_at_star_formation, metallicity)
 
         return self._psi_function(z_at_star_formation, metallicity)
 
 
     def madau_and_dickinson(self, redshifts: jax.Array, metallicity: Optional[jax.Array]) -> jax.Array:
-        """The madau and dickinson SFR ref: https://doi.org/10.1146/annurev-astro-081811-125615
+        """The Madau and Dickinson SFR ref: https://doi.org/10.1146/annurev-astro-081811-125615
 
         Args:
             redshifts (jax.Array): The considered redshifts
 
         Returns:
-            jax.Array: The madau and dickinson SFR in Msol / yr / Mpc^3
+            jax.Array: The Madau and Dickinson SFR in Msol / yr / Mpc^3
         """
 
         def SFH_function(z: jax.Array) -> jax.Array:
@@ -85,6 +88,53 @@ class StarFormationHistory():
         p_Z = self.analytical_metallicity_distribution(redshifts, metallicity)
 
         return sfr_z * p_Z
+
+
+    def madau_and_fragos(self, redshifts: jax.Array, metallicity: Optional[jax.Array]) -> jax.Array:
+        """The Madau and Fragos SFR ref: https://doi.org/10.3847/1538-4357/aa6af9
+
+        Args:
+            redshifts (jax.Array): The considered redshifts
+
+        Returns:
+            jax.Array: The Madau and Fragos SFR in Msol / yr / Mpc^3
+        """
+
+        def SFH_function(z: jax.Array) -> jax.Array:
+            return 0.01 * jnp.power(1 + z, 2.6) / (1 + jnp.power((1 + z) / 3.2, 6.2))
+
+        sfr_z = SFH_function(redshifts)
+
+        if metallicity is None:
+            return sfr_z
+
+        p_Z = self.analytical_metallicity_distribution(redshifts, metallicity)
+
+        return sfr_z * p_Z
+
+
+    def strolger(self, ages: jax.Array, redshifts: jax.Array, metallicity: Optional[jax.Array]) -> jax.Array:
+        """The Strolger et al. 2004 SFR ref: https://doi.org/10.1086/422901
+
+        Args:
+            ages (jax.Array): The considered ages of the Universe
+            redshifts (jax.Array): The considered redshifts
+
+        Returns:
+            jax.Array: The Madau and Fragos SFR in Msol / yr / Mpc^3
+        """
+
+        def SFH_function(t: jax.Array) -> jax.Array:
+            return  0.182 * (jnp.power(t, 1.26) * jnp.exp(-t/1.865) + 0.071 * jnp.exp(0.071 * (t-13.47) /1.865))
+
+        sfr_t = SFH_function(ages *1e-3)
+
+        if metallicity is None:
+            return sfr_t
+
+        p_Z = self.analytical_metallicity_distribution(redshifts, metallicity)
+
+        return sfr_t * p_Z
 
 
     def analytical_metallicity_distribution(self, z: jax.Array, metallicity: jax.Array) -> jax.Array:

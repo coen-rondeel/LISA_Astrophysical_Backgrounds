@@ -58,7 +58,7 @@ cosmology:
 
 SFH:
 
-      # currently "madau_and_dickinson" and "chruslinska_and_nelemans" are implemented
+      # currently "madau_and_dickinson", "madau_and_fragos", "strolger", and "chruslinska_and_nelemans" are implemented
       SFH_name: "madau_and_dickinson"
 
       SFH_path: "./data/SFRDs/moderate_FOH_z_dM.dat"
