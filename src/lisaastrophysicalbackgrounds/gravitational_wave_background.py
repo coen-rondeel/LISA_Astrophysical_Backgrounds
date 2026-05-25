@@ -49,7 +49,6 @@ class GravitationalWaveBackground():
         self.clean_population()
 
 
-
     def get_frequencies(self) -> None:
         """Sets up the frequency relevant quantities according to the configuration file. 
         """
@@ -69,7 +68,6 @@ class GravitationalWaveBackground():
         self.f_bins: jax.Array = self.f_grid[::2]
 
         self.f_factors: jax.Array = self.f_vals * (self.f_bins[1:]**(2/3) - self.f_bins[:-1]**(2/3)) / (self.f_bins[1:] - self.f_bins[:-1])
-
 
 
     def clean_population(self) -> None:
@@ -95,7 +93,6 @@ class GravitationalWaveBackground():
             self.population.Z = self.population.Z[mask]
 
     
-
     def calculate_GWB(self) -> None:
         """Main function to calculate the gravitational wave background from the population.
         """
@@ -131,7 +128,7 @@ class GravitationalWaveBackground():
                 t_max_z: jax.Array, 
                 f_low_obs: jax.Array, 
                 f_high_obs: jax.Array
-            ) -> Tuple[jax.Array, jax.Array]:
+            ) -> Tuple[jax.Array, jax.Array, jax.Array]:
             """Calculates the partial bulk contribution of the population to a specific redshift and frequency bin. 
             Additionally, also across metallicity bins if N_Zbins > 1.
 
@@ -143,8 +140,8 @@ class GravitationalWaveBackground():
                 f_high_obs (jax.Array): The upper frequency of the considered frequency bin in Hz.
 
             Returns:
-                Tuple[jax.Array, jax.Array]: The partial bulk contribution of the redshift and frequency (and metallicity) bin 
-                for: the GWB strength Omega and the number of systems.
+                Tuple[jax.Array, jax.Array, jax.Array]: The partial bulk contribution of the redshift and frequency (and metallicity) bin 
+                for: the GWB strength Omega, the number of systems, and the variance in the GWB strength.
             """
             f_low_zbin: jax.Array = f_low_obs * (1 + z)
             f_high_zbin: jax.Array = f_high_obs * (1 + z)
@@ -163,22 +160,27 @@ class GravitationalWaveBackground():
             
             # contribution to the GWB of each binary
             num_syst_weights = jnp.where(mask, psi * tau_bin * 1e6, 0.0)
-            omega_weights= jnp.where(mask, psi * self.population.M_ch_pow, 0.0)
+            omega_weights = jnp.where(mask, psi * self.population.M_ch_pow, 0.0)
+            
+            num_syst_safe = jnp.where(num_syst_weights > 0, num_syst_weights, 1.0) # to prevent dividing by zero
+            var_weights = jnp.where(num_syst_weights > 0, omega_weights * omega_weights / num_syst_safe, 0.0)
             
             # summing all binaries according to their metallicity
             def sum_by_Z(Z_val):
                 Z_mask = (self.population.Z == Z_val) if self.population.Z is not None else jnp.ones_like(mask)
-                return (jnp.sum(jnp.where(Z_mask, omega_weights, 0.0)), jnp.sum(jnp.where(Z_mask, num_syst_weights, 0.0)))
+                return (jnp.sum(jnp.where(Z_mask, omega_weights, 0.0)), 
+                        jnp.sum(jnp.where(Z_mask, num_syst_weights, 0.0)),
+                        jnp.sum(jnp.where(Z_mask, var_weights, 0.0)))
 
-            partial_omega_Z, partial_num_syst_Z = jax.vmap(sum_by_Z)(self.unique_Zs)
+            partial_omega_Z, partial_num_syst_Z, partial_var_Z = jax.vmap(sum_by_Z)(self.unique_Zs)
             
-            return partial_omega_Z, partial_num_syst_Z
+            return partial_omega_Z, partial_num_syst_Z, partial_var_Z
 
 
         vmap_zZ = jax.vmap(get_sum_for_one_bin_and_z, in_axes=(0, 0, 0, None, None))
         vmap_fzZ = jax.vmap(vmap_zZ, in_axes=(None, None, None, 0, 0))
 
-        partial_omega_fzZ, partial_num_syst_fzZ = vmap_fzZ(
+        partial_omega_fzZ, partial_num_syst_fzZ, partial_var_fzZ = vmap_fzZ(
             self.cosmology.z_vals,
             self.cosmology.ages,
             self.cosmology.z_time_since_z_max,
@@ -186,15 +188,20 @@ class GravitationalWaveBackground():
             self.f_bins[1:]
         )
 
-        self.omega_bulk_fzZ: jax.Array = (self.prefactor_bulk * partial_omega_fzZ *
-                                        ((1 + self.cosmology.z_vals)**(-4/3))[None, :, None] *
-                                        self.cosmology.z_widths[None, :, None] *
-                                        self.f_factors[:, None, None])
+        c_omega = (self.prefactor_bulk *
+                    ((1 + self.cosmology.z_vals)**(-4/3))[None, :, None] *
+                    self.cosmology.z_widths[None, :, None] *
+                    self.f_factors[:, None, None])
         
-        self.N_sources_bulk_fzZ: jax.Array = (partial_num_syst_fzZ / self.population.total_population_mass *
-                                            4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] *
-                                            self.cosmology.z_widths[None, :, None])
-
+        c_num_syst = ( 1.0 / self.population.total_population_mass *
+                        4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] *
+                        self.cosmology.z_widths[None, :, None])
+        
+        self.omega_bulk_fzZ: jax.Array = c_omega * partial_omega_fzZ        
+        self.N_sources_bulk_fzZ: jax.Array = c_num_syst * partial_num_syst_fzZ
+        
+        safe_c_num_syst = jnp.where(c_num_syst > 0, c_num_syst, 1.0) # to prevent dividing by zero
+        self.var_bulk_fzZ = jnp.where(c_num_syst > 0, c_omega**2 / safe_c_num_syst, 0.0) * partial_var_fzZ
 
 
     def calculate_births(self) -> None:
@@ -202,7 +209,7 @@ class GravitationalWaveBackground():
         """
 
         @jax.jit
-        def calculate_redshift_birth(z: jax.Array, age: jax.Array, t_max_z: jax.Array) -> Tuple[jax.Array, jax.Array]:
+        def calculate_redshift_birth(z: jax.Array, age: jax.Array, t_max_z: jax.Array) -> Tuple[jax.Array, jax.Array, jax.Array]:
             """Calculates the partial birth contribution of the population to a specific redshift and frequency bin.
 
             Args:
@@ -211,7 +218,8 @@ class GravitationalWaveBackground():
                 t_max_z (jax.Array): The relative age of the universe comparing the age of the considered bin to z_max in Myr.
 
             Returns:
-                Tuple[jax.Array, jax.Array]: The partial birth contribution of the redshift and frequency bin for: the GWB strength Omega and the number of systems.
+                Tuple[jax.Array, jax.Array, jax.Array]: The partial birth contribution of the redshift and frequency (and metallicity) bin 
+                for: the GWB strength Omega, the number of systems, and the variance in the GWB strength.
             """
             f_birth_obs: jax.Array = (2 * self.population.nu0) / (1 + z)
             psi: jax.Array = self.SFH.delayed_SFH(age, self.population.t0, self.population.Z)
@@ -236,12 +244,15 @@ class GravitationalWaveBackground():
             tau_in_bin = jnp.where(mask_reach_edge, max_evolve_time, tau_to_upper_edge)
 
             # calculating the reached frequency after evolving for tau_in_bin
-            nu_reached_zbin = jnp.where(mask_reach_edge, 
-                                    orbital_freq_from_time(self.population.nu0, 
-                                                                max_evolve_time, 
-                                                                self.population.K_factor),
-                                    f_high_obs * (1 + z) * 0.5,
-                                    )
+            nu_reached_zbin = jnp.where(
+                mask_reach_edge, 
+                orbital_freq_from_time(
+                    self.population.nu0, 
+                    max_evolve_time, 
+                    self.population.K_factor
+                ),
+                f_high_obs * (1 + z) * 0.5,
+            )
             nu_reached_zbin = nu_reached_zbin[0] if isinstance(nu_reached_zbin, tuple) else nu_reached_zbin
             
             # calculate birth frequency factors
@@ -254,25 +265,31 @@ class GravitationalWaveBackground():
             omega_weights = jnp.where(mask, omega_weights, 0.0)
             num_syst_weights = jnp.where(mask, psi * tau_in_bin * 1e6, 0.0)
             
+            safe_num_syst = jnp.where(num_syst_weights > 0, num_syst_weights, 0.0) # to prevent dividing by zero
+            var_weights = jnp.where(num_syst_weights > 0, omega_weights ** 2 / safe_num_syst, 0.0)
+            
             # map to the correct frequency bin and sum systems with the same metallicity
             def sum_by_Z(Z_val):
                 Z_mask = (self.population.Z == Z_val) if self.population.Z is not None else jnp.ones_like(mask)
                 
                 Z_omega = jnp.where(Z_mask, omega_weights, 0.0)
                 Z_num_syst = jnp.where(Z_mask, num_syst_weights, 0.0)
+                Z_var = jnp.where(Z_mask, var_weights, 0.0)
                 
                 part_o = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_omega)
                 part_n = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_num_syst)
-                return part_o, part_n
+                part_v = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_var)
+                
+                return part_o, part_n, part_v
             
-            partial_omega_Zf, partial_num_syst_Zf = jax.vmap(sum_by_Z)(self.unique_Zs)
+            partial_omega_Zf, partial_num_syst_Zf, partial_var_Zf = jax.vmap(sum_by_Z)(self.unique_Zs)
 
-            return partial_omega_Zf.T, partial_num_syst_Zf.T
+            return partial_omega_Zf.T, partial_num_syst_Zf.T, partial_var_Zf.T
         
 
         vmap_redshift = jax.vmap(calculate_redshift_birth, in_axes=(0, 0, 0))
 
-        partial_omega_zfZ, partial_num_syst_zfZ = vmap_redshift(
+        partial_omega_zfZ, partial_num_syst_zfZ, partial_var_zfZ = vmap_redshift(
             self.cosmology.z_vals,
             self.cosmology.ages,
             self.cosmology.z_time_since_z_max
@@ -280,15 +297,21 @@ class GravitationalWaveBackground():
 
         partial_omega_fzZ = jnp.transpose(partial_omega_zfZ, axes=(1,0,2))
         partial_num_syst_fzZ = jnp.transpose(partial_num_syst_zfZ, axes=(1,0,2))
+        partial_var_fzZ = jnp.transpose(partial_var_zfZ, axes=(1,0,2))
 
-        self.omega_birth_fzZ: jax.Array = (self.prefactor_birth_merger * partial_omega_fzZ *
-                                        ((1 + self.cosmology.z_vals)**(-1))[None, :, None] * 
-                                        self.cosmology.z_widths[None,:,None])
+        c_omega = (self.prefactor_birth_merger *
+                    ((1 + self.cosmology.z_vals)**(-1))[None, :, None] * 
+                    self.cosmology.z_widths[None,:,None])
         
-        self.N_sources_birth_fzZ: jax.Array = (partial_num_syst_fzZ / self.population.total_population_mass * 
-                                            4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] * 
-                                            self.cosmology.z_widths[None, :, None])
-
+        c_num_syst = (1.0 / self.population.total_population_mass * 
+                        4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] * 
+                        self.cosmology.z_widths[None, :, None])
+        
+        self.omega_birth_fzZ: jax.Array = c_omega * partial_omega_fzZ
+        self.N_sources_birth_fzZ: jax.Array = c_num_syst * partial_num_syst_fzZ
+        
+        safe_c_num_syst = jnp.where(c_num_syst > 0, c_num_syst, 1.0) # to prevent dividing by zero
+        self.var_birth_fzZ = jnp.where(c_num_syst > 0, c_omega**2 / safe_c_num_syst, 0.0) * partial_var_fzZ
 
 
     def calculate_mergers(self) -> None:
@@ -296,7 +319,7 @@ class GravitationalWaveBackground():
         """
 
         @jax.jit
-        def calculate_redshift_merger(z: jax.Array, age: jax.Array, t_max_z: jax.Array) -> Tuple[jax.Array, jax.Array]:
+        def calculate_redshift_merger(z: jax.Array, age: jax.Array, t_max_z: jax.Array) -> Tuple[jax.Array, jax.Array, jax.Array]:
             """Calculates the partial merger contribution of the population to a specific redshift and frequency bin.
 
             Args:
@@ -305,16 +328,21 @@ class GravitationalWaveBackground():
                 t_max_z (jax.Array): The relative age of the universe comparing the age of the considered bin to z_max in Myr.
 
             Returns:
-                Tuple[jax.Array, jax.Array]: The partial merger contribution of the redshift and frequency bin for: the GWB strength Omega and the number of systems.
+                Tuple[jax.Array, jax.Array, jax.Array]: The partial merger contribution of the redshift and frequency (and metallicity) bin 
+                for: the GWB strength Omega, the number of systems, and the variance in the GWB strength.            
             """
             evolve_time: jax.Array = t_max_z - self.population.t0
             merger_reached: jax.Array = self.population.merger_time <= evolve_time
 
-            f_now_zbin = jnp.where(merger_reached,
-                                2 * self.population.numax,
-                                2 * orbital_freq_from_time(self.population.nu0,
-                                                            evolve_time,
-                                                            self.population.K_factor))
+            f_now_zbin = jnp.where(
+                merger_reached,
+                2 * self.population.numax,
+                2 * orbital_freq_from_time(
+                    self.population.nu0,
+                    evolve_time,
+                    self.population.K_factor
+                )
+            )
             
             f_now_zbin = f_now_zbin[0] if isinstance(f_now_zbin, tuple) else f_now_zbin
             
@@ -354,10 +382,10 @@ class GravitationalWaveBackground():
             freq_fac: jax.Array = (nu_upp_val_23 - nu_low_23) / (f_high_obs - f_low_obs)
 
             tau_in_bin = jnp.where(
-                    merger_reached,
-                    tau_GW(f_low_zbin, 2 * self.population.numax, self.population.K_factor),
-                    evolve_time - tau_non_merged
-                )
+                merger_reached,
+                tau_GW(f_low_zbin, 2 * self.population.numax, self.population.K_factor),
+                evolve_time - tau_non_merged
+            )
             tau_in_bin = tau_in_bin[0] if isinstance(tau_in_bin, tuple) else tau_in_bin
 
             f_center_obs: jax.Array = self.f_vals[jnp.where(mask, bin_idx, 0)]
@@ -366,27 +394,33 @@ class GravitationalWaveBackground():
             # calculate omega and N_sources contributions of each system
             omega_weights: jax.Array = f_center_obs * self.population.M_ch_pow * freq_fac * (1/(1+z)) * psi
             omega_weights = jnp.where(mask, omega_weights, 0.0)
-            
             num_syst_weights = jnp.where(mask, psi * tau_in_bin * 1e6, 0.0)
+            
+            safe_num_syst = jnp.where(num_syst_weights > 0, num_syst_weights, 1.0)
+            var_weights = jnp.where(num_syst_weights > 0, omega_weights**2 / safe_num_syst, 0.0)
 
             # map to the correct frequency bin and sum systems with the same metallicity
             def sum_by_Z(Z_val):
                 Z_mask = (self.population.Z == Z_val) if self.population.Z is not None else jnp.ones_like(mask)
+                
                 Z_omega = jnp.where(Z_mask, omega_weights, 0.0)
                 Z_num_syst = jnp.where(Z_mask, num_syst_weights, 0.0)
+                Z_var = jnp.where(Z_mask, var_weights, 0.0)
                 
                 part_o = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_omega)
                 part_n = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_num_syst)
-                return part_o, part_n
+                part_v = jnp.zeros(self.N_fbins).at[frequency_mapping].add(Z_var)
 
-            partial_omega_Zf, partial_num_syst_Zf = jax.vmap(sum_by_Z)(self.unique_Zs)
+                return part_o, part_n, part_v
 
-            return partial_omega_Zf.T, partial_num_syst_Zf.T
+            partial_omega_Zf, partial_num_syst_Zf, partial_var_Zf = jax.vmap(sum_by_Z)(self.unique_Zs)
+
+            return partial_omega_Zf.T, partial_num_syst_Zf.T, partial_var_Zf
         
 
         vmap_redshift = jax.vmap(calculate_redshift_merger, in_axes=(0, 0, 0))
     
-        partial_omega_zfZ, partial_num_syst_zfZ = vmap_redshift(
+        partial_omega_zfZ, partial_num_syst_zfZ, partial_var_zfZ = vmap_redshift(
             self.cosmology.z_vals,
             self.cosmology.ages,
             self.cosmology.z_time_since_z_max
@@ -394,14 +428,21 @@ class GravitationalWaveBackground():
 
         partial_omega_fzZ = jnp.transpose(partial_omega_zfZ, axes=(1,0,2))
         partial_num_syst_fzZ = jnp.transpose(partial_num_syst_zfZ, axes=(1,0,2))
+        partial_var_fzZ = jnp.transpose(partial_var_zfZ, axes=(1,0,2))
 
-        self.omega_merger_fzZ: jax.Array = (self.prefactor_birth_merger * partial_omega_fzZ *
-                                        ((1 + self.cosmology.z_vals)**(-1))[None, :, None] *
-                                        self.cosmology.z_widths[None, :, None])
+        c_omega = (self.prefactor_birth_merger *
+                    ((1 + self.cosmology.z_vals)**(-1))[None, :, None] * 
+                    self.cosmology.z_widths[None,:,None])
         
-        self.N_sources_merger_fzZ: jax.Array = (partial_num_syst_fzZ / self.population.total_population_mass *
-                                            4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] *
-                                            self.cosmology.z_widths[None, :, None])
+        c_num_syst = (1.0 / self.population.total_population_mass * 
+                        4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] * 
+                        self.cosmology.z_widths[None, :, None])
+        
+        self.omega_merger_fzZ: jax.Array = c_omega * partial_omega_fzZ
+        self.N_sources_merger_fzZ: jax.Array = c_num_syst * partial_num_syst_fzZ
+        
+        safe_c_num_syst = jnp.where(c_num_syst > 0, c_num_syst, 1.0) # to prevent dividing by zero
+        self.var_merger_fzZ = jnp.where(c_num_syst > 0, c_omega**2 / safe_c_num_syst, 0.0) * partial_var_fzZ
 
 
     def combine_contributions(self) -> None:
@@ -409,15 +450,19 @@ class GravitationalWaveBackground():
         """
         self.omega_fzZ: jax.Array = self.omega_bulk_fzZ + self.omega_birth_fzZ + self.omega_merger_fzZ
         self.N_sources_fzZ: jax.Array = self.N_sources_bulk_fzZ + self.N_sources_birth_fzZ + self.N_sources_merger_fzZ
+        self.var_fzZ: jax.Array = self.var_bulk_fzZ + self.var_birth_fzZ + self.var_merger_fzZ
 
         self.omega_fZ = jnp.sum(self.omega_fzZ, axis=1)
         self.N_sources_fZ = jnp.sum(self.N_sources_fzZ, axis=1)
+        self.var_fZ = jnp.sum(self.var_fzZ, axis=1)
         
         self.omega_fz = jnp.sum(self.omega_fzZ, axis=2)
         self.N_sources_fz = jnp.sum(self.N_sources_fzZ, axis=2)
+        self.var_fz = jnp.sum(self.var_fzZ, axis=2)
         
         self.omega_f = jnp.sum(self.omega_fz, axis=1)
         self.N_sources_f = jnp.sum(self.N_sources_fz, axis=1)
+        self.var_f = jnp.sum(self.var_fz, axis=1)
 
 
     def save_results(self) -> None:
@@ -445,19 +490,26 @@ class GravitationalWaveBackground():
             hf.attrs['population'] = self.config['population']['population_name']
             hf.create_dataset('omega_fz', data=self.omega_fz)
             hf.create_dataset('N_sources_fz', data=self.N_sources_fz)
+            hf.create_dataset('var_fz', data=self.var_fz)
+            
             hf.create_dataset('omega_f', data=self.omega_f)
             hf.create_dataset('N_sources_f', data=self.N_sources_f)
+            hf.create_dataset('var_f', data=self.var_f)
             
             if len(self.unique_Zs) > 1:
                 hf.attrs['unique_Zs'] = self.unique_Zs
-                hf.create_dataset('omega_fzZ', data=self.omega_fz)
-                hf.create_dataset('N_sources_fzZ', data=self.N_sources_fz)
-                hf.create_dataset('omega_fZ', data=self.omega_f)
-                hf.create_dataset('N_sources_fZ', data=self.N_sources_f)
+                hf.create_dataset('omega_fzZ', data=self.omega_fzZ)
+                hf.create_dataset('N_sources_fzZ', data=self.N_sources_fzZ)
+                hf.create_dataset('var_fzZ', data=self.var_fzZ)
+                
+                hf.create_dataset('omega_fZ', data=self.omega_fZ)
+                hf.create_dataset('N_sources_fZ', data=self.N_sources_fZ)
+                hf.create_dataset('var_fZ', data=self.var_fZ)
+                
 
         plot_filename: str = f'GWB_for_{self.config['population']['population_name']}_with_{self.config['SFH']['SFH_name']}.png'
         plot_path: Path = save_directory / plot_filename
-        get_GWB_plot(self.f_vals, self.omega_f, save_path=plot_path)
+        get_GWB_plot(self.f_vals, self.omega_f, self.var_f, save_path=plot_path)
 
 
 

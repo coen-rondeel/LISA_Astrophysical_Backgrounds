@@ -8,7 +8,7 @@ global:
             f_scale: "log10"
             f_min: 1e-5 
             f_max: 1
-            N_fbins: 50
+            N_fbins: 500
 
 
 
@@ -18,13 +18,11 @@ population:
       
       population_import_name: "simple_single_Z_import"
 
-      population_path: "./data/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+      population_path: "./data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
 
       considered_source: "white_dwarf"
 
       total_population_mass: 4e6      # BH 2.592e5
-
-      population_metallicities: 0.02
 
 
 
@@ -46,13 +44,13 @@ cosmology:
               w0:        -0.752
               wa:        -0.86
 
-      z_scale: "linear"
+      z_scale: "log10"
 
       z_power_scale: null
 
       z_min: 1e-4
 
-      z_max: 8
+      z_max: 8                # max value is 10
 
       N_zbins: 20
 
@@ -60,10 +58,11 @@ cosmology:
 
 SFH:
 
-      # currently only "madau_and_dickinson" is implemented
+      # currently "madau_and_dickinson" and "chruslinska_and_nelemans" are implemented
       SFH_name: "madau_and_dickinson"
 
-      SFH_path:
+      SFH_path: "./data/SFRDs/moderate_FOH_z_dM.dat"
 
-      SFH_metallicities: 0.02
+      SFH_metallicities: [0.0001, 0.001, 0.005, 0.01, 0.02, 0.03] # 0.02 
 
+      SFH_metallicity_bins: [0, 0.0005, 0.003, 0.008, 0.015, 0.03, 0.1] # min=0, max=?

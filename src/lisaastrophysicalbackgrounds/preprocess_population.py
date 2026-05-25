@@ -194,7 +194,7 @@ if __name__ == "__main__":
                 {
                     "population_import_name": "simple_multi_Z_import", 
                     "total_population_mass": 42.0, 
-                    "population_path": "/Users/rrondeel/Code/LISA_data_analysis/LISA_Astrophysical_Backgrounds/data/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+                    "population_path": "/Users/rrondeel/Code/LISA_data_analysis/LISA_Astrophysical_Backgrounds/data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
                 }
             }
         )
@@ -205,7 +205,7 @@ if __name__ == "__main__":
                 {
                     "population_import_name": None, #"simple_multi_Z_import", 
                     "total_population_mass": 42.0, 
-                    "population_path": "/Users/rrondeel/Code/LISA_data_analysis/LISA_Astrophysical_Backgrounds/data/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+                    "population_path": "/Users/rrondeel/Code/LISA_data_analysis/LISA_Astrophysical_Backgrounds/data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
                 }
             },
         t0 = [1000, 2000],
