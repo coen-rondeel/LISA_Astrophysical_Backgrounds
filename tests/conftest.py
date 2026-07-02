@@ -55,8 +55,8 @@ def mock_project_dir(tmp_path: Path) -> Path:
             'population_path': './data/mock_population.csv',
             'total_population_mass': 1.0e10
         },
-        'SFR': {
-            'SFR_name': 'madau_and_dickinson'
+        'SFH': {
+            'SFH_name': 'madau_and_dickinson'
         }
     }
     

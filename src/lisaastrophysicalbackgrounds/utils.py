@@ -122,7 +122,7 @@ def load_T0_data(ifilepath, code=None, **kwargs):
                 next(f)
             col_names = next(f).strip().split(',')
         #read in the data with the columns
-        dat = pd.read_csv(ifilepath, sep='\s+', skiprows=3, names=col_names, skip_blank_lines=True)
+        dat = pd.read_csv(ifilepath, sep='\\s+', skiprows=3, names=col_names, skip_blank_lines=True)
         
         ##read in the data with the columns
         #dat = pd.read_csv(ifilepath, sep='\s+', skiprows=2, skip_blank_lines=True)
