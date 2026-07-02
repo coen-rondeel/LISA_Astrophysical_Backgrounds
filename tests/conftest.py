@@ -56,7 +56,8 @@ def mock_project_dir(tmp_path: Path) -> Path:
             'total_population_mass': 1.0e10
         },
         'SFH': {
-            'SFH_name': 'madau_and_dickinson'
+            'SFH_name': 'madau_and_dickinson',
+            'SFH_metallicities': None
         }
     }
     
