@@ -1,11 +1,16 @@
 import jax
 import jax.numpy as jnp
-from lisatools.utils.constants import PI, G_SI, MSUN_SI, YRSID_SI, C_SI
+import lisaconstants as lc
+
+G_SI: float = lc.GRAVITATIONAL_CONSTANT
+MSUN_SI: float = lc.SOLAR_MASS
+C_SI: float = lc.SPEED_OF_LIGHT
+YRSID_SI: float = lc.ASTRONOMICAL_YEAR
 
 RSUN_SI: float = 695700000.0 # nominal solar radius in meters (agrees with astropy and wolframalpha value)
 
-KEPLER_CONST: float = (G_SI * MSUN_SI / (RSUN_SI**3))**(1/2) / (2.0 * PI)
-GW_TIME_CONST: float = (96 / 5) * (2 * PI)**(8/3) * (G_SI * MSUN_SI)**(5/3) / (C_SI**5)
+KEPLER_CONST: float = (G_SI * MSUN_SI / (RSUN_SI**3))**(1/2) / (2.0 * jnp.pi)
+GW_TIME_CONST: float = (96 / 5) * (2 * jnp.pi)**(8/3) * (G_SI * MSUN_SI)**(5/3) / (C_SI**5)
 TAU_IN_MYR_CONST: float = 1 / (1e6 * YRSID_SI)
 
 @jax.jit

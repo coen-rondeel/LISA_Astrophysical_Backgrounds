@@ -10,14 +10,11 @@ dependencies = [
     "h5py>=3.15.1",
     "ipykernel>=7.2.0",
     "jax",
-    "lisaanalysistools",
+    "lisaconstants",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
     "pytest>=9.0.2",
 ]
-
-[tool.uv.sources]
-lisaanalysistools = { git = "https://github.com/mikekatz04/LISAanalysistools.git" }
 
 [dependency-groups]
 dev = [
