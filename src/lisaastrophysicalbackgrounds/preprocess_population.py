@@ -1,10 +1,12 @@
 import pandas as pd
 from pandas import DataFrame
 import jax.numpy as jnp
-from .physics import *
+
 from numpy.typing import ArrayLike
 from typing import Optional, cast
 
+from .physics import *
+from .utils import load_T0_data, select_evolutionary_states
 
 class PreprocessPopulation():
     """The ProprocessPopulation instance.
@@ -65,7 +67,23 @@ class PreprocessPopulation():
 
                 
     def BinCodex_importer(self) -> None:
-        raise NotImplementedError("The BinCodex format is not yet supported.")
+        
+        bin_path = self._config['population']['population_path']
+        code_name = self._config['population']['population_synthesis_code_name']
+        
+        #! Current limitation here is that it can only handle 1 metallicity
+        metallicity = self._config['SFH']['SFH_metallicities']
+        assert len(metallicity) == 1, "The T0 data loader can only handle a single metallicity. Needs future proofing."
+        
+        data_T0, _ = load_T0_data(bin_path,code=code_name,metallicity=metallicity)
+
+        ZAMS, WDMS, DWD = select_evolutionary_states(d=data_T0) # type: ignore
+        del ZAMS, WDMS #? maybe we can do something interesting with this data as well?
+        
+        self.t0 = jnp.asarray(DWD.time)
+        self.a = jnp.asarray(DWD.semiMajor)
+        self.m1 = jnp.asarray(DWD.mass1)
+        self.m2 = jnp.asarray(DWD.mass2)
 
         
     def simple_single_Z_import(self) -> None:

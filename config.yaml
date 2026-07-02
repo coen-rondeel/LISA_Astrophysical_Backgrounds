@@ -10,13 +10,15 @@ global:
             f_max: 1
             N_fbins: 500
 
-
+      batch_size: 100000 # to prevent out-of-memory issues. This is dependent on the redshift, frequency and metallicity setup.
 
 population:
 
       population_name: "mock_catalogue"
       
       population_import_name: "simple_single_Z_import"
+      
+      population_synthesis_code_name: "SeBa"
 
       population_path: "./data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
 
