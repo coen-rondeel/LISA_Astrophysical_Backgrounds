@@ -26,7 +26,12 @@ class PreprocessPopulation():
             config (dict): The yaml imported configuration file as a dictionary.
         """
         self._config: dict = config
-        self.total_population_mass = float(self._config['population']['total_population_mass'])
+        
+        tot_pop_mass = self._config['population']['total_population_mass']
+        if isinstance(tot_pop_mass, (list, tuple)):
+            self.total_population_mass = jnp.array(tot_pop_mass, dtype=jnp.float64)
+        else:
+            self.total_population_mass = float(tot_pop_mass)
         
         self.t0: jax.Array = jnp.asarray(t0) if t0 is not None else cast(jax.Array, None)
         self.m1: jax.Array = jnp.asarray(m1) if m1 is not None else cast(jax.Array, None)
@@ -38,6 +43,21 @@ class PreprocessPopulation():
 
         self.check_parameters()
         
+        # check dimensionality for multiple masses vs metallicities
+        unique_Z = jnp.unique(self.Z) if self.Z is not None else jnp.array([0.0])
+        if isinstance(self.total_population_mass, jax.Array):
+            if self.total_population_mass.size != unique_Z.size:
+                if self.total_population_mass.size > unique_Z.size:
+                    raise ValueError(
+                        f"Listed total population masses ({self.total_population_mass.size}) "
+                        f"is larger than unique metallicities ({unique_Z.size})."
+                    )
+                else:
+                    raise ValueError(
+                        f"Listed total population masses ({self.total_population_mass.size}) "
+                        f"must equal the amount of unique metallicities ({unique_Z.size})."
+                    )
+    
         print(f"The metallicities of this population are {self.Z if self.Z is None else jnp.unique(self.Z)}")
         
         
@@ -126,11 +146,11 @@ class PreprocessPopulation():
         self.m2 = jnp.array(population_df['m2'].values)
         self.a = jnp.array(population_df['a'].values)
         
-        # add artificial information
-        # self.Z = jnp.array(population_df['Z'].values)
-        self.Z = jnp.full_like(self.t0, 0.02)
-        self.Z = self.Z.at[100:].set(0.001)
-        
+        try: 
+            self.Z = jnp.array(population_df['Z'].values)
+        except KeyError:
+            raise KeyError("The population import should provide a metallicity column named 'Z' for each binary.")
+  
         
     def mock_BH_import(self) -> None:
         """The simplest possible import of a galaxy population of BBHs with only one metallicity.
@@ -160,7 +180,7 @@ class PreprocessPopulation():
         self.merger_time: jax.Array = tau_GW(2*self.nu0, 2*self.numax, self.K_factor)
         
 
-    #* ============================================= Get Function when population imports are not complete =============================================
+    #* ============================================= Get Functions when population imports are not complete =============================================
     def get_t0(self) -> ValueError:
         raise ValueError("The time of birth of the binary was not correctly imported. Please ensure that t0 is included in the population and import function")
 

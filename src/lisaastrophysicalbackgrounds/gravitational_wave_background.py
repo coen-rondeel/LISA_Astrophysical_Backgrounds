@@ -133,10 +133,14 @@ class GravitationalWaveBackground():
     def calculate_GWB(self) -> None:
         """Main function to calculate the gravitational wave background from the population.
         """
-    
-        #? Do we need the ability to handle multiple total_population_masses?
-        self.prefactor_bulk: float = 8.10e-9 / self.population.total_population_mass
-        self.prefactor_birth_merger: float = 1.28e-8 / self.population.total_population_mass
+        tot_pop_mass = self.population.total_population_mass
+        if isinstance(tot_pop_mass, jax.Array):
+            self.tot_pop_mass_broadcast: jax.Array | float = tot_pop_mass[None, None, :]
+        else:
+            self.tot_pop_mass_broadcast: float | jax.Array = tot_pop_mass        
+        
+        self.prefactor_bulk: float | jax.Array = 8.10e-9 / self.tot_pop_mass_broadcast
+        self.prefactor_birth_merger: float | jax.Array = 1.28e-8 / self.tot_pop_mass_broadcast
 
         if self.population.Z is not None:
             self.unique_Zs = jnp.unique(self.population.Z)
@@ -254,7 +258,7 @@ class GravitationalWaveBackground():
                     self.cosmology.z_widths[None, :, None] *
                     self.f_factors[:, None, None])
         
-        c_num_syst = ( 1.0 / self.population.total_population_mass *
+        c_num_syst = ( 1.0 / self.tot_pop_mass_broadcast *
                         4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] *
                         self.cosmology.z_widths[None, :, None])
         
@@ -372,7 +376,7 @@ class GravitationalWaveBackground():
                     ((1 + self.cosmology.z_vals)**(-1))[None, :, None] * 
                     self.cosmology.z_widths[None,:,None])
         
-        c_num_syst = (1.0 / self.population.total_population_mass * 
+        c_num_syst = (1.0 / self.tot_pop_mass_broadcast * 
                         4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] * 
                         self.cosmology.z_widths[None, :, None])
         
@@ -511,7 +515,7 @@ class GravitationalWaveBackground():
                     ((1 + self.cosmology.z_vals)**(-1))[None, :, None] * 
                     self.cosmology.z_widths[None,:,None])
         
-        c_num_syst = (1.0 / self.population.total_population_mass * 
+        c_num_syst = (1.0 / self.tot_pop_mass_broadcast * 
                         4 * jnp.pi * (self.cosmology.DC_vals**2)[None, :, None] * 
                         self.cosmology.z_widths[None, :, None])
         
