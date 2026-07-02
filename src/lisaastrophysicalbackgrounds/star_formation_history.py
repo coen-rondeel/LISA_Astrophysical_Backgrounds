@@ -38,9 +38,9 @@ class StarFormationHistory():
         """Sets up the metallicity grid using the config file is N_Zs > 1.
         """
         self.SFH_Zs = jnp.atleast_1d(jnp.array(self._config["SFH"]["SFH_metallicities"]))
-        self.SFH_Z_bins = jnp.atleast_1d(jnp.array(self._config["SFH"]["SFH_metallicity_bins"]))
         
         if len(self.SFH_Zs) > 1:
+            self.SFH_Z_bins = jnp.atleast_1d(jnp.array(self._config["SFH"]["SFH_metallicity_bins"]))
             assert len(self.SFH_Z_bins) == len(self.SFH_Zs) + 1, "Metallicity grid not initiallized correctly, please check."
         else: 
             self.SFH_Z_bins = None

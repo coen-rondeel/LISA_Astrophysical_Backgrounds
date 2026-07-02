@@ -52,12 +52,14 @@ def mock_project_dir(tmp_path: Path) -> Path:
         },
         'population': {
             'population_name': 'Test_Catalogue',
+            'population_import_name': 'simple_single_Z_import', 
             'population_path': './data/mock_population.csv',
             'total_population_mass': 1.0e10
         },
         'SFH': {
             'SFH_name': 'madau_and_dickinson',
-            'SFH_metallicities': None
+            'SFH_metallicities': 0.02,
+            'SFH_metallicity_bins': None
         }
     }
     
