@@ -1,6 +1,6 @@
 from lisaastrophysicalbackgrounds.gravitational_wave_background import GravitationalWaveBackground
 
-gwb = GravitationalWaveBackground('config.yaml')
+gwb = GravitationalWaveBackground('base_config.yaml')
 
 
 
