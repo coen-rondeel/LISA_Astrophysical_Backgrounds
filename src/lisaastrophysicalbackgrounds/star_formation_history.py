@@ -258,5 +258,77 @@ class StarFormationHistory:
         return sfr_z * self.metallicity_distribution(z, metallicity)
 
     def _setup_chruslinska_data(self) -> None:
-        # path_to_sfh_data = self._config['SFH']['SFH_path']
-        pass
+        import gzip
+        import pandas as pd
+        from pathlib import Path
+
+        sfh_path = Path(self._config['SFH']['SFH_path'])
+        # Resolve relative to the config file's directory if not absolute
+        if not sfh_path.is_absolute():
+            config_dir = Path(self._config.get("global", {}).get("_config_dir", "."))
+            sfh_path = config_dir / sfh_path
+
+        MAP_DAT_TO_ALLBINS = {
+            "moderate_FOH_z_dM.dat": "MZ19_SFRD_allbins.txt.gz",
+            "low-Z_extreme_FOH_z_dM.dat.txt": "LZ19_SFRD_allbins.txt.gz",
+            "high-Z_extreme_FOH_z_dM.dat.txt": "HZ19_SFRD_allbins.txt.gz",
+            "204f14SBBiC_FMR270_FOH_z_dM.dat": "LZ21_SFRD_allbins.txt.gz",
+            "302f14SBBiC_FMR270_FOH_z_dM.dat": "HZ21_SFRD_allbins.txt.gz"
+        }
+
+        dat_name = sfh_path.name
+        allbins_name = MAP_DAT_TO_ALLBINS.get(dat_name, None)
+        if allbins_name is None:
+            raise ValueError(f"Unknown Chruslinska file: {dat_name}")
+
+        allbins_path = sfh_path.parent / allbins_name
+
+        with gzip.open(str(allbins_path), 'rt') as f:
+            df = pd.read_csv(f)
+
+        # Sort by redshift in ascending order for JAX interpolation compatibility
+        df_sorted = df.sort_values('redshift').reset_index(drop=True)
+
+        self._chruslinska_z = jnp.array(df_sorted['redshift'].values)
+        self._chruslinska_sfrds = jnp.array([
+            df_sorted['0'].values,  # Z=0.03 (z03)
+            df_sorted['1'].values,  # Z=0.02 (z02)
+            df_sorted['2'].values,  # Z=0.01 (z01)
+            df_sorted['3'].values,  # Z=0.005 (z005)
+            df_sorted['4'].values,  # Z=0.001 (z001)
+            df_sorted['5'].values   # Z=0.0001 (z0001)
+        ])
+        self._chruslinska_Zs = jnp.array([0.03, 0.02, 0.01, 0.005, 0.001, 0.0001])
+
+    def chruslinska_and_nelemans(
+        self, z: jax.Array, metallicity: jax.Array | None
+    ) -> jax.Array:
+        """Calculate the Chruslinska & Nelemans (2019) tabulated SFRD.
+
+        Args:
+            z (jax.Array): The considered redshifts.
+            metallicity (Optional[jax.Array]): The metallicity of the binary.
+
+        Returns:
+            jax.Array: The evaluated SFRD in Msol / yr / Mpc^3.
+        """
+        if metallicity is not None:
+            metallicity_arr = jnp.atleast_1d(jnp.array(metallicity))
+            z_arr = jnp.atleast_1d(jnp.array(z))
+
+            if metallicity_arr.size == 1:
+                m_val = metallicity_arr[0]
+                idx = jnp.argmin(jnp.abs(self._chruslinska_Zs - m_val))
+                row = self._chruslinska_sfrds[idx]
+                return jnp.interp(z_arr, self._chruslinska_z, row)
+
+            def get_single(single_z, single_m):
+                idx = jnp.argmin(jnp.abs(self._chruslinska_Zs - single_m))
+                return jnp.interp(single_z, self._chruslinska_z, self._chruslinska_sfrds[idx])
+
+            return jax.vmap(get_single)(z_arr, metallicity_arr)
+        else:
+            interpolated_sfrds = jax.vmap(
+                lambda row: jnp.interp(z, self._chruslinska_z, row)
+            )(self._chruslinska_sfrds)
+            return jnp.sum(interpolated_sfrds, axis=0)

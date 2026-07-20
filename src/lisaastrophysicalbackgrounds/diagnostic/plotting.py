@@ -50,12 +50,9 @@ def plot_population_properties(population, save_path=None) -> plt.Figure:
     tau = np.array(population.merger_time) if getattr(population, "merger_time", None) is not None else None
     Z = np.array(population.Z) if population.Z is not None else None
 
-    has_masses = m1 is not None and m2 is not None
-    num_subplots = 3 if has_masses else 2
+    num_subplots = 3
     
-    fig, axes = plt.subplots(1, num_subplots, figsize=(4 * num_subplots, 3.5), constrained_layout=True)
-    if num_subplots == 1:
-        axes = [axes]
+    fig, axes = plt.subplots(1, num_subplots, figsize=(4.3 * num_subplots, 3.5), constrained_layout=True)
 
     color_palette = ["#0284c7", "#f59e0b", "#10b981", "#8b5cf6"]
 
@@ -66,7 +63,7 @@ def plot_population_properties(population, save_path=None) -> plt.Figure:
         axes[ax_idx].set_xlabel(r"Chirp Mass $M_{\rm ch}$ [$M_\odot$]")
         axes[ax_idx].set_ylabel("Count")
         axes[ax_idx].set_title("Chirp Mass Distribution")
-        axes[ax_idx].grid(True)
+        axes[ax_idx].grid(True, alpha=0.3)
         ax_idx += 1
 
     # Plot 2: Frequency/Period Distribution
@@ -78,26 +75,27 @@ def plot_population_properties(population, save_path=None) -> plt.Figure:
         axes[ax_idx].set_xlabel(r"Initial GW Frequency $f_{\rm gw,0}$ [Hz]")
         axes[ax_idx].set_ylabel("Count")
         axes[ax_idx].set_title("Initial Frequency Distribution")
-        axes[ax_idx].grid(True, which="both")
+        axes[ax_idx].grid(True, which="both", alpha=0.3)
         ax_idx += 1
 
-    # Plot 3: Mass 1 vs Mass 2 Scatter
-    if has_masses and m1 is not None and m2 is not None and len(m1) > 0:
-        # Use scatter or hexbin depending on size
-        if len(m1) > 5000:
-            hb = axes[ax_idx].hexbin(m1, m2, gridsize=25, cmap="Blues", mincnt=1)
-            fig.colorbar(hb, ax=axes[ax_idx], label="Count")
-        else:
-            axes[ax_idx].scatter(m1, m2, color=color_palette[2], alpha=0.5, edgecolors="none", s=15)
-        axes[ax_idx].set_xlabel(r"Primary Mass $m_1$ [$M_\odot$]")
-        axes[ax_idx].set_ylabel(r"Secondary Mass $m_2$ [$M_\odot$]")
-        axes[ax_idx].set_title(r"$m_1$ vs $m_2$ Distribution")
-        axes[ax_idx].grid(True)
+    # Plot 3: Initial Properties Density Plot (Fig 3 style)
+    if nu0 is not None and m_ch is not None and len(nu0) > 0 and len(m_ch) > 0:
+        f_gw = 2 * nu0
+        log_f_gw = np.log10(f_gw)
+        hb = axes[ax_idx].hexbin(log_f_gw, m_ch, gridsize=30, cmap="Blues", mincnt=1)
+        fig.colorbar(hb, ax=axes[ax_idx], label="Count")
+        
+        axes[ax_idx].set_xlabel(r"$\log_{10}(f_0 / \rm{Hz})$")
+        axes[ax_idx].set_ylabel(r"$\mathcal{M}$ in $M_\odot$")
+        axes[ax_idx].set_title("Initial Properties Density")
+        axes[ax_idx].set_xlim(-5.5, -2.0)
+        axes[ax_idx].set_ylim(0.0, 1.1)
+        axes[ax_idx].grid(True, alpha=0.3)
 
     fig.suptitle(f"Binary Population Diagnostics: {population._config['population']['population_name']}", y=1.05)
 
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Saved population properties plot to {save_path}")
 
     return fig
@@ -135,16 +133,7 @@ def plot_gwb_spectral_components(gwb, save_path=None) -> plt.Figure:
     c_birth = "#f59e0b"  # Amber 500 (Birth)
     c_merger = "#10b981" # Emerald 500 (Merger)
 
-    # Plot uncertainty bands first (background layers)
-    if var_f is not None and np.any(var_f > 0):
-        std_f = np.sqrt(var_f)
-        # Prevent negative values in log scale
-        ax.fill_between(frequencies, np.maximum(1e-20, omega_f - 3.0 * std_f), omega_f + 3.0 * std_f,
-                        color="#38bdf8", alpha=0.1, label=r"$3\sigma$ Interval")
-        ax.fill_between(frequencies, np.maximum(1e-20, omega_f - 2.0 * std_f), omega_f + 2.0 * std_f,
-                        color="#38bdf8", alpha=0.15, label=r"$2\sigma$ Interval")
-        ax.fill_between(frequencies, np.maximum(1e-20, omega_f - std_f), omega_f + std_f,
-                        color="#38bdf8", alpha=0.25, label=r"$1\sigma$ Interval")
+
 
     # Plot individual components
     ax.loglog(frequencies, omega_bulk_f, label="Bulk", color=c_bulk, linestyle="--", linewidth=1.5)
@@ -315,7 +304,12 @@ def plot_sfrd_vs_redshift(gwb, save_path=None) -> plt.Figure | None:
     # Get metallicities
     SFH_Zs = np.atleast_1d(np.array(gwb.SFH.SFH_Zs))
 
-    fig, ax = plt.subplots(figsize=(6.5, 4.5), constrained_layout=True)
+    import gzip
+    import pandas as pd
+    from pathlib import Path
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
+    ax = axes[0]
 
     # Use a warm color palette like the paper's original plot
     cmap = plt.get_cmap("YlOrRd")
@@ -355,8 +349,84 @@ def plot_sfrd_vs_redshift(gwb, save_path=None) -> plt.Figure | None:
     ax.set_xlim(0, 8)
     ax.set_ylim(bottom=-0.002)
 
+    # Panel 2: Total SFRD comparison across models
+    ax2 = axes[1]
+    
+    # Locate SFRDs directory
+    sfrd_dir = Path("./data/SFRDs")
+    if not sfrd_dir.exists():
+        # Try checking relative/absolute paths
+        possible_dirs = [
+            Path("/Users/jinhongming/mywork/LISA_astrophysics_WG/code/LISA_Astrophysical_Backgrounds-git/data/SFRDs"),
+            Path("/Users/jinhongming/mywork/LISA_astrophysics_WG/code/LISA_Astrophysical_Backgrounds-dev/data/SFRDs"),
+            Path("../data/SFRDs"),
+        ]
+        for d in possible_dirs:
+            if d.exists():
+                sfrd_dir = d
+                break
+
+    models = {
+        "LZ19": "LZ19_SFRD_allbins.txt.gz",
+        "MZ19": "MZ19_SFRD_allbins.txt.gz",
+        "HZ19": "HZ19_SFRD_allbins.txt.gz",
+        "LZ21": "LZ21_SFRD_allbins.txt.gz",
+        "HZ21": "HZ21_SFRD_allbins.txt.gz"
+    }
+
+    colors_dict = {
+        "LZ19": "#FFD700",  # Gold
+        "MZ19": "#00CC00",  # Green
+        "HZ19": "#76D7EA",  # Sky Blue
+        "LZ21": "#0099FF",  # Bright Blue
+        "HZ21": "#000080",  # Navy
+        "Madau & Dickinson, 2014": "red"
+    }
+
+    for label, filename in models.items():
+        file_path = sfrd_dir / filename
+        if file_path.exists():
+            try:
+                with gzip.open(str(file_path), 'rt') as f:
+                    df = pd.read_csv(f)
+                
+                cols = ['0', '1', '2', '3', '4', '5']
+                total_sfrd = df[cols].sum(axis=1).values
+                redshifts_data = df['redshift'].values
+                
+                sort_idx = np.argsort(redshifts_data)
+                ax2.plot(
+                    redshifts_data[sort_idx], 
+                    total_sfrd[sort_idx], 
+                    label=label, 
+                    color=colors_dict[label], 
+                    linewidth=2.0
+                )
+            except Exception as e:
+                print(f"Failed to load comparison model {label}: {e}")
+        else:
+            print(f"Comparison model file not found: {file_path}")
+
+    # Plot Madau & Dickinson (2014) on Panel 2
+    md_sfr = 0.015 * (1.0 + redshifts)**2.7 / (1.0 + ((1.0 + redshifts) / 2.9)**5.6)
+    ax2.plot(
+        redshifts, 
+        md_sfr, 
+        label="Madau & Dickinson, 2014", 
+        color=colors_dict["Madau & Dickinson, 2014"], 
+        linewidth=2.0
+    )
+
+    ax2.set_xlabel(r"Redshift ($z$)")
+    ax2.set_ylabel(r"Total SFRD ($M_\odot \, \rm{Mpc}^{-3} \, \rm{yr}^{-1}$)")
+    ax2.set_title("Total SFRD Model Comparison")
+    ax2.grid(True, which="both", alpha=0.3)
+    ax2.legend(loc="upper right", framealpha=0.9)
+    ax2.set_xlim(0, 8)
+    ax2.set_ylim(bottom=-0.005)
+
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Saved SFRD vs Redshift plot to {save_path}")
 
     return fig
@@ -386,7 +456,8 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     # 1. Population plots
     pop_plot_path = save_directory / f"diagnostic_population_{pop_name}.png"
     try:
-        plot_population_properties(gwb.population, save_path=pop_plot_path)
+        fig = plot_population_properties(gwb.population, save_path=pop_plot_path)
+        plt.close(fig)
         generated_plots["population"] = str(pop_plot_path.resolve())
     except Exception as e:
         print(f"Failed to generate population diagnostic plot: {e}")
@@ -394,7 +465,8 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     # 2. GWB Spectral components
     spec_plot_path = save_directory / f"diagnostic_GWB_spectrum_{pop_name}_with_{sfh_name}.png"
     try:
-        plot_gwb_spectral_components(gwb, save_path=spec_plot_path)
+        fig = plot_gwb_spectral_components(gwb, save_path=spec_plot_path)
+        plt.close(fig)
         generated_plots["spectral_components"] = str(spec_plot_path.resolve())
     except Exception as e:
         print(f"Failed to generate GWB spectrum diagnostic plot: {e}")
@@ -402,7 +474,8 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     # 3. GWB Redshift evolution
     redshift_plot_path = save_directory / f"diagnostic_GWB_redshift_{pop_name}.png"
     try:
-        plot_gwb_redshift_evolution(gwb, save_path=redshift_plot_path)
+        fig = plot_gwb_redshift_evolution(gwb, save_path=redshift_plot_path)
+        plt.close(fig)
         generated_plots["redshift_evolution"] = str(redshift_plot_path.resolve())
     except Exception as e:
         print(f"Failed to generate GWB redshift diagnostic plot: {e}")
@@ -411,7 +484,9 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     if len(gwb.unique_Zs) > 1:
         metallicity_plot_path = save_directory / f"diagnostic_GWB_metallicity_{pop_name}.png"
         try:
-            plot_gwb_metallicity_breakdown(gwb, save_path=metallicity_plot_path)
+            fig = plot_gwb_metallicity_breakdown(gwb, save_path=metallicity_plot_path)
+            if fig is not None:
+                plt.close(fig)
             generated_plots["metallicity_breakdown"] = str(metallicity_plot_path.resolve())
         except Exception as e:
             print(f"Failed to generate GWB metallicity breakdown plot: {e}")
@@ -420,7 +495,9 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     if getattr(gwb, "SFH", None) is not None:
         sfrd_plot_path = save_directory / f"diagnostic_SFRD_{sfh_name}.png"
         try:
-            plot_sfrd_vs_redshift(gwb, save_path=sfrd_plot_path)
+            fig = plot_sfrd_vs_redshift(gwb, save_path=sfrd_plot_path)
+            if fig is not None:
+                plt.close(fig)
             generated_plots["sfrd_vs_redshift"] = str(sfrd_plot_path.resolve())
         except Exception as e:
             print(f"Failed to generate SFRD diagnostic plot: {e}")
