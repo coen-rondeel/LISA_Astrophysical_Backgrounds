@@ -715,3 +715,8 @@ class GravitationalWaveBackground:
         plot_filename: str = f"GWB_for_{pop_name}_with_{sfh_name}.png"
         plot_path: Path = save_directory / plot_filename
         get_GWB_plot(self.f_vals, self.omega_f, self.var_f, save_path=plot_path)
+
+        if self.config["global"].get("save_diagnostics", False):
+            from .diagnostic import generate_diagnostic_plots
+            generate_diagnostic_plots(self)
+

@@ -2,6 +2,8 @@ global:
 
       save_results: True
 
+      save_diagnostics: True
+
       save_directory: "./results/"
 
       frequency:
