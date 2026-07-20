@@ -1,0 +1,32 @@
+name: Install and Test Package
+
+on: [push]
+
+jobs:
+  validate-package:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Install package and dependencies
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" = "macos-latest" ]; then
+          uv sync --locked --dev
+        else
+          uv sync --locked --all-extras --dev
+        fi
+
+    - name: Run tests folder
+      run: uv run pytest tests/
