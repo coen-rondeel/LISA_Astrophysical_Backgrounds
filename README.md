@@ -18,6 +18,7 @@ Tailored specifically for low-frequency gravitational wave observatories like LI
 * **Config-Driven:** Fully controlled via a simple YAML configuration file, making parameter space exploration and reproducibility effortless.
 * **Flexible Cosmology & SFH:** Supports standard and custom `astropy` cosmologies, alongside dynamic Star Formation Histories (e.g., Madau & Dickinson 2014).
 * **HDF5 Output:** Saves rich, multi-dimensional redshift-frequency results (`omega_fz`, `N_sources_fz`) natively to HDF5 format.
+* **Diagnostic Visualizations:** Automatically generates publication-quality diagnostic plots (binary population parameter distributions, GWB components with confidence bands, and redshift-frequency heatmaps) upon calculation completion.
 
 ## Dependencies
 
@@ -72,7 +73,8 @@ num_sources = gwb.N_sources_f
 - `preprocess_catalogue.py`: Handles the importing of the compact binary catalogue. E.g., calculating chirp masses, orbital frequencies, and relavent GW characteristics.
 - `star_formation_history.py`: Evaluates start formation rates for a given cosmology explicitly accounting for possible delay times between star formation and binary creation.
 - `physics.py`: JAX-compiled pure-physics functions.
-- `utils.py`: Helper functions for YAML processing and plotting functionalities.
+- `utils.py`: Helper functions for YAML processing.
+- `diagnostic/`: Subpackage containing functions to generate rich diagnostic plots (e.g., parameter distributions, GWB component bands, and redshift-frequency heatmaps).
 
 ## Contributing
 Contributions, issues, and feature requests are welcome!
