@@ -290,6 +290,78 @@ def plot_gwb_metallicity_breakdown(gwb, save_path=None) -> plt.Figure | None:
     return fig
 
 
+def plot_sfrd_vs_redshift(gwb, save_path=None) -> plt.Figure | None:
+    """Plot Star Formation Rate Density (SFRD) vs redshift.
+
+    Replicates Figure 1 from Hofman & Nelemans (2024). Shows the SFRD
+    as a function of redshift, split by metallicity bins.
+
+    Args:
+        gwb: The GravitationalWaveBackground instance.
+        save_path: Optional path or filename where the plot will be saved.
+
+    Returns:
+        plt.Figure or None: The matplotlib figure object, or None if SFH is missing.
+    """
+    _apply_style()
+
+    if getattr(gwb, "SFH", None) is None:
+        print("Skipping SFRD plot: SFH object is not initialized.")
+        return None
+
+    # Generate a redshift grid
+    redshifts = np.linspace(0.0, 8.0, 200)
+    
+    # Get metallicities
+    SFH_Zs = np.atleast_1d(np.array(gwb.SFH.SFH_Zs))
+
+    fig, ax = plt.subplots(figsize=(6.5, 4.5), constrained_layout=True)
+
+    # Use a warm color palette like the paper's original plot
+    cmap = plt.get_cmap("YlOrRd")
+    if len(SFH_Zs) > 1:
+        colors = [cmap(i) for i in np.linspace(0.25, 0.95, len(SFH_Zs))]
+    else:
+        colors = ["firebrick"]
+
+    import jax.numpy as jnp
+    z_jax = jnp.array(redshifts)
+
+    for idx, Z_val in enumerate(SFH_Zs):
+        try:
+            # The SFH functions in StarFormationHistory take (redshifts, metallicity)
+            # strolger takes (ages, redshifts, metallicity)
+            if gwb.config["SFH"]["SFH_name"] == "strolger":
+                # Convert redshifts to age in Myr
+                age_func = getattr(gwb.cosmology.cosmo, "age")
+                ages = np.array(age_func(redshifts).value * 1000)
+                sfrd = gwb.SFH._psi_function(jnp.array(ages), z_jax, Z_val)
+            else:
+                sfrd = gwb.SFH._psi_function(z_jax, Z_val)
+            
+            sfrd_np = np.array(sfrd)
+            label_text = f"$Z = {Z_val}$" if Z_val >= 0.0001 else f"$Z = {Z_val:.1e}$"
+            ax.plot(redshifts, sfrd_np, label=label_text, color=colors[idx], linewidth=2.0)
+        except Exception as e:
+            print(f"Failed to evaluate SFRD for Z={Z_val}: {e}")
+
+    ax.set_xlabel(r"Redshift ($z$)")
+    ax.set_ylabel(r"SFRD ($M_\odot \, \rm{Mpc}^{-3} \, \rm{yr}^{-1}$)")
+    
+    sfh_name_clean = gwb.config["SFH"]["SFH_name"].replace("_", " ").title()
+    ax.set_title(f"Star Formation Rate Density ({sfh_name_clean})")
+    ax.grid(True, which="both", alpha=0.3)
+    ax.legend(loc="upper right", framealpha=0.9)
+    ax.set_xlim(0, 8)
+    ax.set_ylim(bottom=-0.002)
+
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Saved SFRD vs Redshift plot to {save_path}")
+
+    return fig
+
+
 def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
     """Generate all diagnostic plots for the simulation and save them.
 
@@ -343,5 +415,14 @@ def generate_diagnostic_plots(gwb, save_directory=None) -> dict[str, str]:
             generated_plots["metallicity_breakdown"] = str(metallicity_plot_path.resolve())
         except Exception as e:
             print(f"Failed to generate GWB metallicity breakdown plot: {e}")
+
+    # 5. SFRD vs Redshift plot
+    if getattr(gwb, "SFH", None) is not None:
+        sfrd_plot_path = save_directory / f"diagnostic_SFRD_{sfh_name}.png"
+        try:
+            plot_sfrd_vs_redshift(gwb, save_path=sfrd_plot_path)
+            generated_plots["sfrd_vs_redshift"] = str(sfrd_plot_path.resolve())
+        except Exception as e:
+            print(f"Failed to generate SFRD diagnostic plot: {e}")
 
     return generated_plots

@@ -6,6 +6,7 @@ from .plotting import (
     plot_gwb_redshift_evolution,
     plot_gwb_spectral_components,
     plot_population_properties,
+    plot_sfrd_vs_redshift,
 )
 
 __all__ = [
@@ -13,5 +14,6 @@ __all__ = [
     "plot_gwb_spectral_components",
     "plot_gwb_redshift_evolution",
     "plot_gwb_metallicity_breakdown",
+    "plot_sfrd_vs_redshift",
     "generate_diagnostic_plots",
 ]

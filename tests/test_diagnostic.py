@@ -9,6 +9,7 @@ from lisaastrophysicalbackgrounds.diagnostic import (
     plot_gwb_redshift_evolution,
     plot_gwb_spectral_components,
     plot_population_properties,
+    plot_sfrd_vs_redshift,
 )
 
 
@@ -43,6 +44,12 @@ def test_individual_plotting_functions(mock_project_dir: Path) -> None:
     assert fig_met is None
     assert not met_path.exists()
 
+    # Test plot_sfrd_vs_redshift
+    sfrd_path = save_dir / "test_sfrd.png"
+    fig_sfrd = plot_sfrd_vs_redshift(gwb, save_path=sfrd_path)
+    assert fig_sfrd is not None
+    assert sfrd_path.exists()
+
 
 def test_generate_diagnostic_plots(mock_project_dir: Path) -> None:
     """Test high-level orchestrator generates the expected diagnostic files."""
@@ -55,11 +62,13 @@ def test_generate_diagnostic_plots(mock_project_dir: Path) -> None:
     assert "population" in plot_paths
     assert "spectral_components" in plot_paths
     assert "redshift_evolution" in plot_paths
+    assert "sfrd_vs_redshift" in plot_paths
     assert "metallicity_breakdown" not in plot_paths  # Single metallicity mock
 
     assert Path(plot_paths["population"]).exists()
     assert Path(plot_paths["spectral_components"]).exists()
     assert Path(plot_paths["redshift_evolution"]).exists()
+    assert Path(plot_paths["sfrd_vs_redshift"]).exists()
 
 
 def test_pipeline_integration_runs_diagnostics(mock_project_dir: Path) -> None:
@@ -83,7 +92,9 @@ def test_pipeline_integration_runs_diagnostics(mock_project_dir: Path) -> None:
     expected_pop = save_dir / f"diagnostic_population_{pop_name}.png"
     expected_spec = save_dir / f"diagnostic_GWB_spectrum_{pop_name}_with_{sfh_name}.png"
     expected_redshift = save_dir / f"diagnostic_GWB_redshift_{pop_name}.png"
+    expected_sfrd = save_dir / f"diagnostic_SFRD_{sfh_name}.png"
 
     assert expected_pop.exists()
     assert expected_spec.exists()
     assert expected_redshift.exists()
+    assert expected_sfrd.exists()
