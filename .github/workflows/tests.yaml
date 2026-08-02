@@ -59,8 +59,13 @@ jobs:
       with:
         enable-cache: true
 
+    # Deliberately not --all-extras: the cuda12x/cuda13x extras pull jax[cuda*],
+    # whose wheels are manylinux-only, so --all-extras cannot resolve on macOS.
+    # They are also pointless here, since CI has no GPU and would otherwise
+    # download ~300 MB of CUDA wheels per run. `uv lock --check` still validates
+    # that the extras resolve.
     - name: Install package and dependencies
-      run: uv sync --locked --all-extras --dev
+      run: uv sync --locked --dev
 
     - name: Run tests folder
       run: uv run pytest tests/
