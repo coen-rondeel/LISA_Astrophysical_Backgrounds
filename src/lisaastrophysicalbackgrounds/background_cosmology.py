@@ -21,6 +21,9 @@ class BackgroundCosmology:
         self.get_cosmology()
         self.get_redshift_grid()
 
+        # dimensionless Hubble parameter h = H0 / (100 km/s/Mpc)
+        self.h_100: float = getattr(self.cosmo, "H")(0).value / 100.0
+
     def get_cosmology(self) -> None:
         """Get the configuration definied cosmology from astropy.cosmology."""
         if self._config["cosmology"]["standard"]:
@@ -95,8 +98,8 @@ class BackgroundCosmology:
             # grid uniform in lookback time (matches Boileau et al. 2025).
             # Requires z_min > 0, as the lookback-time inversion is undefined at z=0.
             lookback_func = getattr(self.cosmo, "lookback_time")
-            t_min: float = float(lookback_func(self.z_min).value)
-            t_max: float = float(lookback_func(self.z_max).value)
+            t_min = float(lookback_func(self.z_min).value)
+            t_max = float(lookback_func(self.z_max).value)
             t_grid = jnp.linspace(t_min, t_max, 2 * self.N_zbins + 1)
             z_grid = jnp.array(
                 [
