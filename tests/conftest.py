@@ -1,15 +1,15 @@
-# tests/conftest.py
+"""Shared pytest fixtures for the test suite."""
 
+from pathlib import Path
+
+import pandas as pd
 import pytest
 import yaml
-import pandas as pd
-from pathlib import Path
-from typing import Dict
 
 
 @pytest.fixture
 def mock_project_dir(tmp_path: Path) -> Path:
-    """Creates a temporary project directory with a mock config and dataset.
+    """Create a temporary project directory with a mock config and dataset.
 
     Args:
         tmp_path (Path): Built-in pytest fixture for temporary directories.
@@ -33,7 +33,7 @@ def mock_project_dir(tmp_path: Path) -> Path:
     mock_data.to_csv(pop_path, index=False)
 
     # 2. Create a mock configuration
-    config: Dict = {
+    config: dict = {
         "global": {
             "frequency": {
                 "f_min": 1.0e-4,
@@ -57,6 +57,7 @@ def mock_project_dir(tmp_path: Path) -> Path:
             "population_import_name": "simple_single_Z_import",
             "population_path": "./data/mock_population.csv",
             "total_population_mass": 1.0e10,
+            "population_IMF": "kroupa",
         },
         "SFH": {
             "SFH_name": "madau_and_dickinson",
