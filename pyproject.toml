@@ -1,18 +1,22 @@
 [project]
 name = "lisaastrophysicalbackgrounds"
-version = "0.1.0"
 description = "This package can be used to create an astrophysical gravitational wave background for a specific star formation history and galaxy catalogue."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
+dynamic = ["version"]
+# Every package imported by src/lisaastrophysicalbackgrounds, and nothing else.
+# The package itself is numpy-free (jnp throughout); numpy still arrives in the
+# environment as a transitive dependency of jax, pandas and astropy.
 dependencies = [
     "astropy>=7.2.0",
     "h5py>=3.15.1",
-    "ipykernel>=7.2.0",
     "jax",
     "lisaconstants",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
-    "pytest>=9.0.2",
+    "pyyaml>=6.0",
     "tqdm>=4.68.4",
 ]
 
@@ -25,7 +29,11 @@ cuda13x = [
 ]
 
 [dependency-groups]
+# ipykernel powers scripts/example_run.ipynb and numpy is used by the tests;
+# neither is imported by the package itself, so they stay out of the wheel.
 dev = [
+    "ipykernel>=7.2.0",
+    "numpy>=2.0",
     "pytest>=9.0.2",
 ]
 
@@ -35,6 +43,15 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/lisaastrophysicalbackgrounds/__init__.py"
+
+# Keep the source distribution to the package itself: the binary catalogues and the
+# stored results are repository material, not something a `pip install` needs. Without
+# this the sdist is ~98 MB, almost all of it DWDs_vanHaaften_reduced.csv.gz.
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/data/populations",
+    "/results",
+]
 
 # restric dependencies if jax is giving issues on GPU
 # [tool.uv]
@@ -60,8 +77,8 @@ path = "src/lisaastrophysicalbackgrounds/__init__.py"
 
 # python guidelines as defined for LISA
 [tool.ruff]
-# Target the minimum supported version in your guidelines
-target-version = "py310" 
+# kept in step with requires-python above
+target-version = "py312"
 line-length = 88
 
 [tool.ruff.lint]
