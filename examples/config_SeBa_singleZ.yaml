@@ -1,8 +1,18 @@
+# =============================================================================
+#  Single-metallicity example: SeBa mock catalogue.
+#
+#  A minimal, runnable single-Z configuration. See ../config.yaml for the fully
+#  documented reference listing every available setting, and
+#  config_vanHaaften_multiZ.yaml for the multi-metallicity example.
+#
+#  Paths below are relative to this file, hence the leading "../".
+# =============================================================================
+
 global:
 
       save_results: True
 
-      save_directory: "./results/"
+      save_directory: "../results/"
 
       frequency:
             f_scale: "log10"
@@ -21,12 +31,18 @@ population:
       
       population_synthesis_code_name: "SeBa"
 
-      population_path: "./data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+      population_path: "../data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
 
       considered_source: "white_dwarf"
 
       # this can also be a list or tuple of values where each value represents a metallicity.
       total_population_mass: 4e6   # BH 2.592e5
+
+      # IMF frame of total_population_mass; the SFRD is converted into it.
+      # SeBa samples a Kroupa IMF (the exact variant, Kroupa 2001 vs
+      # Kroupa-Tout-Gilmore 1993, is unconfirmed, but the difference is well
+      # inside the systematic uncertainty on the conversion factor).
+      population_IMF: "kroupa"
 
 
 
@@ -64,10 +80,22 @@ cosmology:
 
 SFH:
 
-      # currently "madau_and_dickinson", "madau_and_fragos", and "strolger" are implemented
+      # analytical: "madau_and_dickinson", "madau_and_fragos", "strolger", "neijssel_2019"
+      # numerical:  "chruslinska_and_nelemans" (uses SFH_path + SFRD_model below)
       SFH_name: "madau_and_dickinson"
 
-      SFH_path: "./data/SFRDs/moderate_FOH_z_dM.dat"
+      # directory with the Chruslinska & Nelemans data files (+ Time_redshift_deltaT.dat),
+      # or a direct path to one *FOH_z_dM* file (then SFRD_model is not needed)
+      SFH_path: "../data/SFRDs"
+
+      # "MZ19" (moderate), "LZ19"/"HZ19" (low/high-Z extreme), "LZ21"/"HZ21" (starburst FMR)
+      SFRD_model: "MZ19"
+
+      # IMF handling (defaults shown): the native frame of SFH_name is looked up
+      # automatically and psi is converted into population_IMF. madau_and_dickinson
+      # is Salpeter, so this run applies Salpeter -> Kroupa = 0.66.
+      # SFH_reference_IMF: null            # override the registry lookup
+      # SFH_IMF_correction: "auto"         # or a float used verbatim
 
       # This can be List[float, ...], Tuple[float, ...], or float
       SFH_metallicities: [0.0001, 0.001, 0.005, 0.01, 0.02, 0.03] # 0.02 

@@ -11,12 +11,13 @@ import yaml
 
 
 def get_config(path: str):
-    """Read configuration parameter form file.
+    """Read the configuration parameters from file.
 
     Args:
-        path -- Path to the yaml configuration file
-    Return:
-        Dict with parameter
+        path (str): Path to the yaml configuration file.
+
+    Returns:
+        dict: The parsed configuration.
     """
     with open(path) as stream:
         return yaml.load(stream, yaml.FullLoader)

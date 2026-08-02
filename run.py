@@ -1,8 +1,10 @@
-from lisaastrophysicalbackgrounds.gravitational_wave_background import GravitationalWaveBackground
+"""Run the GWB pipeline for the reference configuration."""
 
-gwb = GravitationalWaveBackground('base_config.yaml')
+from lisaastrophysicalbackgrounds.gravitational_wave_background import (
+    GravitationalWaveBackground,
+)
 
-
+gwb = GravitationalWaveBackground("config.yaml")
 
 gwb.calculate_GWB()
 
