@@ -11,12 +11,16 @@ import jax.numpy as jnp
 from tqdm.auto import tqdm
 
 from .background_cosmology import BackgroundCosmology
-from .physics import orbital_freq_from_time, tau_GW
+from .physics import C_SI, G_SI, MSUN_SI, YRSID_SI, orbital_freq_from_time, tau_GW
 from .preprocess_population import PreprocessPopulation
 from .star_formation_history import StarFormationHistory
 from .utils import _where, get_config, get_GWB_plot
 
 jax.config.update("jax_enable_x64", True)
+
+PREFACTOR = (
+    2 / 3 * (2 * jnp.pi * G_SI * MSUN_SI) ** (5 / 3) / (C_SI**3 * 1e10 * YRSID_SI)
+)
 
 
 class GravitationalWaveBackground:
@@ -38,6 +42,10 @@ class GravitationalWaveBackground:
         pop_path = Path(self.config["population"]["population_path"])
         if not pop_path.is_absolute():
             self.config["population"]["population_path"] = str(config_dir / pop_path)
+
+        sfh_path = self.config["SFH"].get("SFH_path")
+        if sfh_path is not None and not Path(sfh_path).is_absolute():
+            self.config["SFH"]["SFH_path"] = str(config_dir / sfh_path)
 
         save_dir = Path(self.config["global"]["save_directory"])
         if not save_dir.is_absolute():
@@ -599,11 +607,12 @@ class GravitationalWaveBackground:
         tot_mass_broadcast: float | jax.Array,
     ) -> None:
         """Apply precalculated cosmological scaling to raw accumulators."""
-        pre_bulk = 8.10e-9 / tot_mass_broadcast
-        pre_bm = 1.28e-8 / tot_mass_broadcast
+        # legacy prefactor BirthMerger was 1.28e-8, for Bulk was 8.10e-9
+        prefactor_birthmerger = PREFACTOR / self.cosmology.h_100**2 / tot_mass_broadcast
+        prefactor_bulk = (1 / 2) ** (2 / 3) * prefactor_birthmerger
 
         c_omega_bulk = (
-            pre_bulk
+            prefactor_bulk
             * ((1 + self.cosmology.z_vals) ** (-4 / 3))[None, :, None]
             * self.cosmology.z_widths[None, :, None]
             * self.f_factors[:, None, None]
@@ -620,7 +629,7 @@ class GravitationalWaveBackground:
 
         # pre-factors of birth and merger are identical
         c_omega_bm = (
-            pre_bm
+            prefactor_birthmerger
             * ((1 + self.cosmology.z_vals) ** (-1))[None, :, None]
             * self.cosmology.z_widths[None, :, None]
         )
@@ -693,6 +702,12 @@ class GravitationalWaveBackground:
             redshift_data.attrs["cosmology"] = str(self.cosmology.cosmo)
 
             hf.attrs["population"] = pop_name
+
+            hf.attrs["SFH_name"] = self.config["SFH"]["SFH_name"]
+            hf.attrs["SFH_reference_IMF"] = self.SFH.imf_source or ""
+            hf.attrs["population_IMF"] = self.SFH.imf_target or ""
+            hf.attrs["IMF_correction_factor"] = self.SFH.imf_factor
+
             hf.create_dataset("omega_fz", data=self.omega_fz)
             hf.create_dataset("N_sources_fz", data=self.N_sources_fz)
             hf.create_dataset("var_fz", data=self.var_fz)
