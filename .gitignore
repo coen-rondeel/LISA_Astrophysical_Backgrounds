@@ -28,3 +28,9 @@ __pycache__/
 # --- Secrets ---
 .env
 .env.*
+dev/
+
+# --- Large local data ---
+# The van Haaften catalogue is distributed as the gzipped 6-significant-figure
+# DWDs_vanHaaften_reduced.csv.gz; the full-precision original stays local.
+data/populations/DWDs_vanHaaften_reduced.csv

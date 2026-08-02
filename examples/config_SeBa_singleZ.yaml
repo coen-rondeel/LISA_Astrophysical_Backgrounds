@@ -1,0 +1,104 @@
+# =============================================================================
+#  Single-metallicity example: SeBa mock catalogue.
+#
+#  A minimal, runnable single-Z configuration. See ../config.yaml for the fully
+#  documented reference listing every available setting, and
+#  config_vanHaaften_multiZ.yaml for the multi-metallicity example.
+#
+#  Paths below are relative to this file, hence the leading "../".
+# =============================================================================
+
+global:
+
+      save_results: True
+
+      save_directory: "../results/"
+
+      frequency:
+            f_scale: "log10"
+            f_min: 1e-5 
+            f_max: 1
+            N_fbins: 500
+
+      # to prevent out-of-memory issues. This is dependent on the redshift, frequency and metallicity setup.
+      batch_size: 100000 
+
+population:
+
+      population_name: "mock_catalogue"
+      
+      population_import_name: "simple_single_Z_import"
+      
+      population_synthesis_code_name: "SeBa"
+
+      population_path: "../data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+
+      considered_source: "white_dwarf"
+
+      # this can also be a list or tuple of values where each value represents a metallicity.
+      total_population_mass: 4e6   # BH 2.592e5
+
+      # IMF frame of total_population_mass; the SFRD is converted into it.
+      # SeBa samples a Kroupa IMF (the exact variant, Kroupa 2001 vs
+      # Kroupa-Tout-Gilmore 1993, is unconfirmed, but the difference is well
+      # inside the systematic uncertainty on the conversion factor).
+      population_IMF: "kroupa"
+
+
+
+cosmology:
+
+      # using standard cosmology or custom
+      standard: True
+
+      # included cosmologies are: Planck18, Planck15, Planck13, WMAP9, WMAP7, WMAP5, WMAP3, WMAP1 
+      standard_cosmology: "Planck18"
+
+      # custom cosmologies should named as in the astropy.cosmology module. e.g., from DESI+CMB+DESY5 table V of https://arxiv.org/pdf/2503.14738
+      custom_cosmology: 
+          cosmology_type: "w0waCDM"
+          params:
+              H0:        66.74
+              Om0:       0.3191
+              Ode0:      0.6809
+              w0:        -0.752
+              wa:        -0.86
+
+      # "linear", "log10", "log", "power", and "lookback_time" are supported.
+      # "lookback_time" gives a grid uniform in lookback time (requires z_min > 0).
+      z_scale: "log10"
+
+      z_power_scale: null
+
+      z_min: 1e-4
+
+      z_max: 8                # max value is 10
+
+      N_zbins: 20
+
+
+
+SFH:
+
+      # analytical: "madau_and_dickinson", "madau_and_fragos", "strolger", "neijssel_2019"
+      # numerical:  "chruslinska_and_nelemans" (uses SFH_path + SFRD_model below)
+      SFH_name: "madau_and_dickinson"
+
+      # directory with the Chruslinska & Nelemans data files (+ Time_redshift_deltaT.dat),
+      # or a direct path to one *FOH_z_dM* file (then SFRD_model is not needed)
+      SFH_path: "../data/SFRDs"
+
+      # "MZ19" (moderate), "LZ19"/"HZ19" (low/high-Z extreme), "LZ21"/"HZ21" (starburst FMR)
+      SFRD_model: "MZ19"
+
+      # IMF handling (defaults shown): the native frame of SFH_name is looked up
+      # automatically and psi is converted into population_IMF. madau_and_dickinson
+      # is Salpeter, so this run applies Salpeter -> Kroupa = 0.66.
+      # SFH_reference_IMF: null            # override the registry lookup
+      # SFH_IMF_correction: "auto"         # or a float used verbatim
+
+      # This can be List[float, ...], Tuple[float, ...], or float
+      SFH_metallicities: [0.0001, 0.001, 0.005, 0.01, 0.02, 0.03] # 0.02 
+
+      # Not used when running one metallicity
+      SFH_metallicity_bins: [0, 0.0005, 0.003, 0.008, 0.015, 0.03, 0.1] # min=0, max=?

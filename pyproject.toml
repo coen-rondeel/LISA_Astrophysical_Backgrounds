@@ -1,26 +1,39 @@
 [project]
 name = "lisaastrophysicalbackgrounds"
-version = "0.1.0"
 description = "This package can be used to create an astrophysical gravitational wave background for a specific star formation history and galaxy catalogue."
 readme = "README.md"
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE.txt"]
+dynamic = ["version"]
+# Every package imported by src/lisaastrophysicalbackgrounds, and nothing else.
+# The package itself is numpy-free (jnp throughout); numpy still arrives in the
+# environment as a transitive dependency of jax, pandas and astropy.
 dependencies = [
     "astropy>=7.2.0",
-    "gpubackendtools>=0.1.1",
     "h5py>=3.15.1",
-    "ipykernel>=7.2.0",
     "jax",
-    "lisaanalysistools",
+    "lisaconstants",
     "matplotlib>=3.10.8",
     "pandas>=2.3.3",
-    "pytest>=9.0.2",
+    "pyyaml>=6.0",
+    "tqdm>=4.68.4",
 ]
 
-[tool.uv.sources]
-lisaanalysistools = { git = "https://github.com/mikekatz04/LISAanalysistools.git" }
+[project.optional-dependencies]
+cuda12x = [
+    "jax[cuda12]",
+]
+cuda13x = [
+    "jax[cuda13]",
+]
 
 [dependency-groups]
+# ipykernel powers scripts/example_run.ipynb and numpy is used by the tests;
+# neither is imported by the package itself, so they stay out of the wheel.
 dev = [
+    "ipykernel>=7.2.0",
+    "numpy>=2.0",
     "pytest>=9.0.2",
 ]
 
@@ -30,3 +43,53 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 path = "src/lisaastrophysicalbackgrounds/__init__.py"
+
+# Keep the source distribution to the package itself: the binary catalogues and the
+# stored results are repository material, not something a `pip install` needs. Without
+# this the sdist is ~98 MB, almost all of it DWDs_vanHaaften_reduced.csv.gz.
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/data/populations",
+    "/results",
+]
+
+# restric dependencies if jax is giving issues on GPU
+# [tool.uv]
+# override-dependencies = [
+#     "nvidia-cublas-cu12; sys_platform == 'never'",
+#     "nvidia-cusolver-cu12; sys_platform == 'never'",
+#     "nvidia-cusparse-cu12; sys_platform == 'never'",
+#     "nvidia-cufft-cu12; sys_platform == 'never'",
+#     "nvidia-nvjitlink-cu12; sys_platform == 'never'",
+# ]
+# constraint-dependencies = [
+#     "nvidia-cuda-runtime-cu12>=12.8,<12.9",
+#     "nvidia-cublas-cu12>=12.8,<12.9",
+#     "nvidia-cuda-nvrtc-cu12>=12.8,<12.9",
+#     "nvidia-cuda-cccl-cu12>=12.8,<12.9",
+#     "nvidia-cuda-cupti-cu12>=12.8,<12.9",
+#     "nvidia-cuda-nvcc-cu12>=12.8,<12.9",
+#     "nvidia-nvjitlink-cu12>=12.9,<12.10",
+#     "nvidia-cusolver-cu12>=11.7,<11.8",  
+#     "nvidia-cusparse-cu12>=12.5,<12.6",  
+#     "nvidia-cufft-cu12>=11.4,<11.5",      
+# ]
+
+# python guidelines as defined for LISA
+[tool.ruff]
+# kept in step with requires-python above
+target-version = "py312"
+line-length = 88
+
+[tool.ruff.lint]
+# Select rules:
+# E/W = PEP 8 errors/warnings
+# F = Pyflakes
+# I = Import sorting (isort replacement)
+# D = Docstring style (pydocstyle replacement for PEP 257)
+# UP = Pyupgrade (ensures modern f-strings, type hints, etc.)
+select = ["E", "W", "F", "I", "D", "UP"]
+
+# Optional: Adjust docstring convention to match PEP 257 (Google or NumPy styles also available)
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"

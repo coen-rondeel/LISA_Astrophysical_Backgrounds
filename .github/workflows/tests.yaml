@@ -1,0 +1,67 @@
+name: Install and Test Package
+
+on:
+  push:
+  pull_request:
+
+# The van Haaften catalogue in data/populations is ~94 MiB and never changes, but a
+# plain checkout would download it on every run, on every runner. `filter: blob:none`
+# makes a partial clone that fetches file contents on demand, and `sparse-checkout`
+# limits the working tree to what CI actually needs. Cone mode always keeps the
+# repository-root files (pyproject.toml, uv.lock, README.md, LICENSE.txt, run.py),
+# which the build requires, so only src/ and tests/ have to be named. Nothing in CI
+# reads data/, results/ or examples/ — the tests build their own fixture.
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        filter: blob:none
+        sparse-checkout: |
+          src
+          tests
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    # ruff is intentionally not a project dependency; run it through uvx so the
+    # standards in pyproject.toml are the single source of truth.
+    - name: Lint
+      run: uvx ruff check src tests run.py
+
+    - name: Check formatting
+      run: uvx ruff format --check src tests run.py
+
+  validate-package:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        filter: blob:none
+        sparse-checkout: |
+          src
+          tests
+          data/SFRDs
+
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
+    - name: Install package and dependencies
+      run: uv sync --locked --dev
+
+    - name: Run tests folder
+      run: uv run pytest tests/

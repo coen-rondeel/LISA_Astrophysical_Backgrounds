@@ -1,43 +1,113 @@
+# =============================================================================
+#  LISA Astrophysical Backgrounds (LAB) reference configuration
+# =============================================================================
+#
+#  This file documents *every* setting the code reads, with its allowed values
+#  and defaults. It is runnable as-is: it reproduces the single-metallicity
+#  mock-catalogue example used in the README and in scripts/example_run.ipynb.
+#
+#  Two ready-to-run variants are shipped in examples/:
+#    examples/config_SeBa_singleZ.yaml      : the same single-Z SeBa mock
+#                                             catalogue, minimal comments
+#    examples/config_vanHaaften_multiZ.yaml : a 25-metallicity van Haaften
+#                                             catalogue (multi-Z path)
+#
+#  All relative paths are resolved *relative to this file*, not to the working
+#  directory, so the config can be run from anywhere.
+#
+#  Usage (see run.py):
+#     from lisaastrophysicalbackgrounds.gravitational_wave_background import (
+#         GravitationalWaveBackground,
+#     )
+#     gwb = GravitationalWaveBackground("config.yaml")
+#     gwb.calculate_GWB()
+# =============================================================================
+
+
 global:
 
+      # Write {population_name}_gwb_results.h5 and a GWB plot to save_directory.
+      # Optional, default: False.
       save_results: True
 
+      # Output directory. Created by you beforehand; relative to this file.
       save_directory: "./results/"
 
       frequency:
+            # Observed GW frequency grid. Supported f_scale: "linear", "log10".
             f_scale: "log10"
-            f_min: 1e-5 
-            f_max: 1
-            N_fbins: 50
 
+            # Grid bounds in Hz. The LISA band is roughly 1e-5 to 1 Hz.
+            f_min: 1e-5
+            f_max: 1
+
+            # Number of frequency bins. Internally a 2*N+1 interleaved grid is
+            # built: f_vals are the bin centres, f_bins the bin edges.
+            N_fbins: 500
+
+      # Number of binaries pushed through the JIT kernels at once. Lower this if
+      # you hit out-of-memory errors; the requirement scales with
+      # N_fbins * N_zbins * N_metallicities. Optional, default: 1000000.
+      batch_size: 100000
 
 
 population:
 
+      # Used for the output filename: {population_name}_gwb_results.h5
       population_name: "mock_catalogue"
-      
+
+      # Which import routine to use (a method name on PreprocessPopulation):
+      #   "simple_single_Z_import" : CSV with columns t0, m1, m2, a; one
+      #                              metallicity for the whole population.
+      #   "simple_multi_Z_import"  : as above plus a per-binary "Z" column.
+      #   "mock_BH_import"         : as single-Z, but uses the BH minimum
+      #                              separation (ISCO) instead of contact.
+      #   "BinCodex_importer"      : BinCodex/T0 format; single metallicity
+      #                              only, needs population_synthesis_code_name.
+      #   null                     : skip the import and supply the population
+      #                              manually (see PreprocessPopulation).
       population_import_name: "simple_single_Z_import"
 
-      population_path: "./data/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+      # Population-synthesis code the catalogue came from. Only read by
+      # BinCodex_importer; ignored by the simple_* routines.
+      population_synthesis_code_name: "SeBa"
 
+      # Path to the catalogue, relative to this file. The simple_* routines use
+      # pandas.read_csv, so .csv, .csv.gz, .txt and .dat all work, and gzipped
+      # files are decompressed transparently from the extension.
+      population_path: "./data/populations/Initials_SeBa_Gamma175Alpha4_Z02.txt"
+
+      # Reserved for future use: the code does not read this key yet.
       considered_source: "white_dwarf"
 
-      total_population_mass: 4e6      # BH 2.592e5
+      # Total star-forming mass M_SF the catalogue was drawn from, in Msol.
+      # A single float for the single-Z path, or a list with one entry per
+      # metallicity for the multi-Z path, in which case it must have the same
+      # length as SFH_metallicities and be aligned to it *positionally*.
+      total_population_mass: 4e6
 
-      population_metallicities: 0.02
-
+      # IMF the population-synthesis code sampled, i.e. the frame in which
+      # total_population_mass is expressed: "kroupa", "chabrier" or "salpeter".
+      # This is the target frame: the SFRD is converted into it, the
+      # population masses are never rescaled. Optional; if omitted, no IMF
+      # correction is applied and a warning is emitted.
+      population_IMF: "kroupa"
 
 
 cosmology:
 
-      # using standard cosmology or custom
+      # True  -> take standard_cosmology from astropy.cosmology.
+      # False -> build custom_cosmology below.
       standard: True
 
-      # included cosmologies are: Planck18, Planck15, Planck13, WMAP9, WMAP7, WMAP5, WMAP3, WMAP1 
+      # Planck18, Planck15, Planck13, WMAP9, WMAP7, WMAP5, WMAP3, WMAP1.
       standard_cosmology: "Planck18"
 
-      # custom cosmologies should named as in the astropy.cosmology module. e.g., from DESI+CMB+DESY5 table V of https://arxiv.org/pdf/2503.14738
-      custom_cosmology: 
+      # Only used when standard is False. cosmology_type is any class in
+      # astropy.cosmology (FlatLambdaCDM, LambdaCDM, w0waCDM, ...); params are
+      # passed to it as keyword arguments. The example below is the
+      # DESI+CMB+DESY5 fit of table V in https://arxiv.org/pdf/2503.14738
+      custom_cosmology:
           cosmology_type: "w0waCDM"
           params:
               H0:        66.74
@@ -46,24 +116,106 @@ cosmology:
               w0:        -0.752
               wa:        -0.86
 
-      z_scale: "linear"
+      # Spacing of the redshift grid:
+      #   "linear"        : uniform in z
+      #   "log10", "log"  : uniform in log10(z) / ln(z)
+      #   "power"         : uniform in log_a(z), base a = z_power_scale
+      #   "lookback_time" : uniform in lookback time (needs z_min > 0);
+      #                     this is the Boileau et al. 2025 convention
+      z_scale: "log10"
 
+      # Base of the "power" scale. Only read when z_scale is "power".
       z_power_scale: null
 
+      # Redshift grid bounds. z_min must be > 0 for the log/power/lookback
+      # scales. z_max should stay <= 10: the numerical SFRD data stop there and
+      # the analytic fits are not calibrated beyond it.
       z_min: 1e-4
-
       z_max: 8
 
+      # Number of redshift bins (a 2*N+1 interleaved grid, as for frequency).
       N_zbins: 20
-
 
 
 SFH:
 
-      # currently only "madau_and_dickinson" is implemented
+      # Star formation rate density psi(z):
+      #   analytic:
+      #     "madau_and_dickinson"      : Madau & Dickinson 2014
+      #     "madau_and_fragos"         : Madau & Fragos 2017
+      #     "strolger"                 : Strolger et al. 2004 (evaluated in
+      #                                  cosmic time rather than redshift)
+      #     "neijssel_2019"            : Neijssel et al. 2019
+      #   numerical:
+      #     "chruslinska_and_nelemans" : Chruslinska & Nelemans 2019/2021
+      #                                  tabulated SFRD; reads SFH_path and the
+      #                                  SFRD_model / SFH_* keys below.
       SFH_name: "madau_and_dickinson"
 
-      SFH_path:
+      # ---- IMF frame -----------------------------------------------------------
 
+      # The SFRD carries the IMF of the study that calibrated it, while
+      # total_population_mass carries the IMF of the population synthesis. The
+      # rate psi / M_SF is only meaningful with both in one frame, so psi is
+      # converted into population_IMF above.
+      #
+      # Native frame of the selected SFH model. null looks it up from SFH_name:
+      #   madau_and_dickinson -> salpeter    madau_and_fragos -> kroupa
+      #   strolger            -> salpeter    neijssel_2019    -> kroupa
+      #   chruslinska_and_nelemans -> kroupa
+      # Set a string only to override that lookup, e.g. for a psi(z) you have
+      # already rescaled yourself. Optional, default: null.
+      SFH_reference_IMF: null
+
+      # "auto"  -> factor derived from the two IMFs above (Speagle et al. 2014
+      #            Table C.2 for chabrier <-> kroupa; the FUV+IR SFR conversion
+      #            0.66 for salpeter -> kroupa). Salpeter -> Kroupa is 0.66,
+      #            Chabrier -> Kroupa 1.06, and identical frames give exactly 1.
+      # <float> -> used verbatim, bypassing both keys above. Use this for an
+      #            indicator-specific value (e.g. 0.63 for a purely FUV-
+      #            calibrated SFRD) or to disable the correction with 1.0.
+      # Optional, default: "auto".
+      SFH_IMF_correction: "auto"
+
+      # ---- numerical SFRD settings (only read for chruslinska_and_nelemans) --
+
+      # Either the directory holding the data files together with
+      # Time_redshift_deltaT.dat (then SFRD_model selects the file), or a direct
+      # path to one *FOH_z_dM* file (then SFRD_model is ignored).
+      SFH_path: "./data/SFRDs"
+
+      # Which tabulated model to use:
+      #   "MZ19" : moderate metallicity evolution (Chruslinska & Nelemans 2019)
+      #   "LZ19" / "HZ19" : low / high-Z extreme variants of the same
+      #   "LZ21" / "HZ21" : low / high-Z starburst FMR variants (2021)
+      SFRD_model: "MZ19"
+
+      # How to treat star formation falling outside the metallicity grid below:
+      #   "renormalize" : rescale so all star formation lands on the grid
+      #   "extend"      : stretch the outermost bin edges to the data limits
+      #   "raw"         : simply drop it
+      # Optional, default: "renormalize".
+      SFH_coverage: "renormalize"
+
+      # Solar scale used for the Z <-> 12+log(O/H) conversion, as
+      # (Z_sun, 12+log(O/H)_sun): "AndersGrevesse89" (0.017, 8.83),
+      # "Asplund09" (0.0134, 8.69), "GrevesseSauval98" (0.0201, 8.93),
+      # "Villante14" (0.019, 8.85). Optional, default: "AndersGrevesse89".
+      SFH_solar_Z_scale: "AndersGrevesse89"
+
+      # ---- metallicity grid ---------------------------------------------------
+
+      # The metallicities (mass fraction Z) the background is computed on.
+      # A single value (or a one-element list) selects the single-Z path, which
+      # skips the metallicity distribution entirely. A list of N values selects
+      # the multi-Z path and requires SFH_metallicity_bins below, plus a
+      # total_population_mass list of the same length and ordering.
       SFH_metallicities: 0.02
 
+      # The N+1 bin edges bracketing SFH_metallicities, used both to integrate
+      # dP/dZ over each bin and to snap the per-binary Z of the catalogue onto
+      # this grid. Not read when running a single metallicity.
+      # Example for a 6-metallicity grid:
+      #   SFH_metallicities:    [0.0001, 0.001, 0.005, 0.01, 0.02, 0.03]
+      #   SFH_metallicity_bins: [0, 0.0005, 0.003, 0.008, 0.015, 0.03, 0.1]
+      SFH_metallicity_bins: null

@@ -1,0 +1,137 @@
+# =============================================================================
+#  Multi-metallicity example: van Haaften DWD catalogue.
+#
+#  6.14M double white dwarfs across 25 metallicities, on a redshift grid uniform
+#  in lookback time (the Boileau et al. 2025 convention). The catalogue ships as
+#  a gzipped CSV rounded to 6 significant figures (~98 MB); pandas reads it
+#  transparently. This can be a heavy run depending on the user's hardware,
+#  usage of a GPU is recommended, or reduce N_fbins/N_zbins.
+
+#
+#  See ../config.yaml for the fully documented reference listing every available
+#  setting, and config_SeBa_singleZ.yaml for the single-metallicity example.
+#
+#  Paths below are relative to this file, hence the leading "../".
+# =============================================================================
+
+global:
+
+      save_results: True
+
+      save_directory: "../results/"
+
+      frequency:
+            f_scale: "log10"
+            f_min: 1e-5
+            f_max: 0.1
+            N_fbins: 40
+
+      # to prevent out-of-memory issues. This is dependent on the redshift, frequency and metallicity setup.
+      batch_size: 1000000
+
+population:
+
+      population_name: "vanHaaften"
+
+      population_import_name: "simple_multi_Z_import"
+
+      population_synthesis_code_name: "cosmic"
+
+      population_path: "../data/populations/DWDs_vanHaaften_reduced.csv.gz"
+
+      considered_source: "white_dwarf"
+
+      # IMF frame of total_population_mass; the SFRD is converted into it.
+      # The van Haaften population assumes a Kroupa IMF.
+      population_IMF: "kroupa"
+
+      # one total star-forming mass M_SF(Z) per metallicity, aligned to SFH_metallicities
+      total_population_mass: [
+            58633563.8281965, 71688440.07986821, 84744011.11155224, 78214264.33421326,
+            65151434.13480759, 71688440.07986821, 84744011.11155224,
+            58633563.8281965 , 78214264.33421326, 71688440.07986821,
+            52114764.30192704, 58633563.8281965 , 58633563.8281965 ,
+            58633563.8281965 , 58633563.8281965 , 58633563.8281965 ,
+            58633563.8281965 , 58633563.8281965 , 65151434.13480759,
+            71688440.07986821, 58633563.8281965 , 65151434.13480759,
+            58633563.8281965 , 58633563.8281965 , 58633563.8281965
+      ]
+
+
+
+cosmology:
+
+      # using standard cosmology or custom
+      standard: True
+
+      # included cosmologies are: Planck18, Planck15, Planck13, WMAP9, WMAP7, WMAP5, WMAP3, WMAP1
+      standard_cosmology: "Planck18"
+
+      # custom cosmologies should named as in the astropy.cosmology module. e.g., from DESI+CMB+DESY5 table V of https://arxiv.org/pdf/2503.14738
+      custom_cosmology:
+          cosmology_type: "w0waCDM"
+          params:
+              H0:        66.74
+              Om0:       0.3191
+              Ode0:      0.6809
+              w0:        -0.752
+              wa:        -0.86
+
+      # "linear", "log10", "log", "power", and "lookback_time" are supported.
+      # "lookback_time" gives a grid uniform in lookback time (requires z_min > 0).
+      z_scale: "lookback_time"
+
+      z_power_scale: null
+
+      z_min: 1e-3
+
+      z_max: 8                # max value is 10
+
+      N_zbins: 40
+
+
+
+SFH:
+
+      # analytical: "madau_and_dickinson", "madau_and_fragos", "strolger", "neijssel_2019"
+      # numerical:  "chruslinska_and_nelemans" (uses SFH_path + SFRD_model below)
+      SFH_name: "madau_and_dickinson"
+
+      # directory with the Chruslinska & Nelemans data files (+ Time_redshift_deltaT.dat),
+      # or a direct path to one *FOH_z_dM* file (then SFRD_model is not needed)
+      SFH_path: "../data/SFRDs"
+
+      # "MZ19" (moderate), "LZ19"/"HZ19" (low/high-Z extreme), "LZ21"/"HZ21" (starburst FMR)
+      SFRD_model: "MZ19"
+
+      # optional numerical-SFRD settings (defaults shown):
+      # SFH_coverage: "renormalize"        # raw | extend | renormalize
+      # SFH_solar_Z_scale: "AndersGrevesse89"
+
+      # IMF handling (defaults shown): the native frame of SFH_name is looked up
+      # automatically and psi is converted into population_IMF. madau_and_dickinson
+      # is Salpeter, so this run applies Salpeter -> Kroupa = 0.66.
+      # SFH_reference_IMF: null            # override the registry lookup
+      # SFH_IMF_correction: "auto"         # or a float used verbatim
+
+      # the 25 simulated metallicities of the population (descending), paired with total_population_mass
+      SFH_metallicities: [
+            0.02694318, 0.021401732, 0.017     , 0.01350358, 0.01072627,
+            0.00852018, 0.00676782, 0.00537587, 0.00427021, 0.00339195,
+            0.00269432, 0.00214017, 0.0017    , 0.00135036, 0.00107263,
+            0.00085202, 0.00067678, 0.00053759, 0.00042702, 0.00033919,
+            0.00026943, 0.00021402, 0.00017   , 0.00013504, 0.00010726
+      ]
+
+      # 26 geometric-midpoint bin edges bracketing the metallicities above
+      SFH_metallicity_bins: [
+            0.03023076121647217  , 0.024013136354665544 , 0.01907431372291019  ,
+            0.015151265953708288 , 0.012035075614494496 , 0.009559798697075163 ,
+            0.007593618676731137 , 0.0060318256360243055, 0.004791251802264205 ,
+            0.003805829582298712 , 0.0030230776906986683, 0.002401312731486676 ,
+            0.0019074299462889844, 0.0015151277173888673, 0.001203510135727989 ,
+            0.0009559823286023651, 0.0007593616369029976, 0.0006031833553738038,
+            0.0004791259560908799, 0.0003805797075515192, 0.0003023044189223834,
+            0.00024013206491428824, 0.00019074433150162028, 0.00015151501575751494,
+            0.00012035111299859258, 9.559552490611248e-05
+      ]
