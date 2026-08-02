@@ -263,3 +263,14 @@ def test_invalid_config_raises() -> None:
         make_sfh(multi_Z=False, SFRD_model="bogus")
     with pytest.raises(ValueError, match="SFH_coverage"):
         make_sfh(multi_Z=True, SFH_coverage="bogus")
+
+
+def test_missing_sfh_path_names_the_setting() -> None:
+    """A missing SFH_path is reported as such, not as a missing time file.
+
+    A non-existent directory used to fall through to the "direct file path"
+    branch, so the failure surfaced as Time_redshift_deltaT.dat missing from
+    the parent directory, which points at the wrong setting.
+    """
+    with pytest.raises(FileNotFoundError, match="SFH_path does not exist"):
+        make_sfh(multi_Z=False, SFH_path=str(SFRD_DIR / "no_such_dir"))

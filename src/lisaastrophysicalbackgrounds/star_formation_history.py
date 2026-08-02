@@ -569,6 +569,13 @@ class StarFormationHistory:
         sfh_config: dict = self._config["SFH"]
 
         data_path = Path(sfh_config["SFH_path"])
+
+        if not data_path.exists():
+            raise FileNotFoundError(
+                f"SFH_path does not exist: {data_path}. Point it at the "
+                f"directory holding the Chruslinska & Nelemans tables and "
+                f"{_CHRUSLINSKA_TIME_FILE}, or at one *FOH_z_dM* file directly."
+            )
         if data_path.is_dir():
             model_name: str = sfh_config["SFRD_model"]
             if model_name not in CHRUSLINSKA_MODELS:
