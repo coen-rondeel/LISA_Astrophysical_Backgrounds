@@ -240,7 +240,7 @@ class PreprocessPopulation:
             2 * self.nu0, 2 * self.numax, self.K_factor
         )
 
-    # --- Fallback getters for incomplete configuration imports ---
+    # * --- Fallback getters for incomplete configuration imports ---
 
     def get_t0(self) -> ValueError:
         """Raise error when population birth time is missing."""
@@ -297,38 +297,3 @@ class PreprocessPopulation:
     def get_merger_time(self) -> None:
         """Calculate remaining orbital lifespan profile duration."""
         self.merger_time = tau_GW(2 * self.nu0, 2 * self.numax, self.K_factor)
-
-
-if __name__ == "__main__":
-    # run with python -m src.lisaastrophysicalbackgrounds.preprocess_population
-    jax.config.update("jax_enable_x64", True)
-    base_data_path = (
-        "/Users/rrondeel/Code/LISA_data_analysis/"
-        "LISA_Astrophysical_Backgrounds/data/populations/"
-        "Initials_SeBa_Gamma175Alpha4_Z02.txt"
-    )
-
-    proc_cat = PreprocessPopulation(
-        config={
-            "population": {
-                "population_import_name": "simple_multi_Z_import",
-                "total_population_mass": 42.0,
-                "population_path": base_data_path,
-            }
-        }
-    )
-    print("starting on second population")
-    proc_cat_2 = PreprocessPopulation(
-        config={
-            "population": {
-                "population_import_name": None,
-                "total_population_mass": 42.0,
-                "population_path": base_data_path,
-            }
-        },
-        t0=[1000, 2000],
-        m1=[0.6, 0.8],
-        m2=[0.5, 0.7],
-        a=[5, 7],
-    )
-    breakpoint()

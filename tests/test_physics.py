@@ -1,7 +1,8 @@
-# tests/test_physics.py
+"""Unit tests for the pure-physics functions."""
 
 import jax.numpy as jnp
 import numpy as np
+
 from lisaastrophysicalbackgrounds.physics import chirp_mass, orbital_freq_kepler, tau_GW
 
 
