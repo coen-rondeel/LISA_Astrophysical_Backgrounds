@@ -2,18 +2,19 @@
 #  LISA Astrophysical Backgrounds (LAB) reference configuration
 # =============================================================================
 #
-#  This file documents *every* setting the code reads, with its allowed values
-#  and defaults. It is runnable as-is: it reproduces the single-metallicity
+#  This file documents all settings the code reads, with its allowed values
+#  and defaults. In its current stage, it reproduces the single-metallicity
 #  mock-catalogue example used in the README and in scripts/example_run.ipynb.
 #
-#  Two ready-to-run variants are shipped in examples/:
+#  Two ready-to-run examples are available in examples/:
 #    examples/config_SeBa_singleZ.yaml      : the same single-Z SeBa mock
 #                                             catalogue, minimal comments
 #    examples/config_vanHaaften_multiZ.yaml : a 25-metallicity van Haaften
 #                                             catalogue (multi-Z path)
 #
-#  All relative paths are resolved *relative to this file*, not to the working
-#  directory, so the config can be run from anywhere.
+#  All relative paths are resolved relative to this file, not to the working
+#  directory, so the config can be run from anywhere. The other option would 
+#  be to work with absolute paths.
 #
 #  Usage (see run.py):
 #     from lisaastrophysicalbackgrounds.gravitational_wave_background import (
@@ -121,7 +122,6 @@ cosmology:
       #   "log10", "log"  : uniform in log10(z) / ln(z)
       #   "power"         : uniform in log_a(z), base a = z_power_scale
       #   "lookback_time" : uniform in lookback time (needs z_min > 0);
-      #                     this is the Boileau et al. 2025 convention
       z_scale: "log10"
 
       # Base of the "power" scale. Only read when z_scale is "power".
@@ -143,8 +143,7 @@ SFH:
       #   analytic:
       #     "madau_and_dickinson"      : Madau & Dickinson 2014
       #     "madau_and_fragos"         : Madau & Fragos 2017
-      #     "strolger"                 : Strolger et al. 2004 (evaluated in
-      #                                  cosmic time rather than redshift)
+      #     "strolger"                 : Strolger et al. 2004
       #     "neijssel_2019"            : Neijssel et al. 2019
       #   numerical:
       #     "chruslinska_and_nelemans" : Chruslinska & Nelemans 2019/2021
@@ -152,12 +151,12 @@ SFH:
       #                                  SFRD_model / SFH_* keys below.
       SFH_name: "madau_and_dickinson"
 
-      # ---- IMF frame -----------------------------------------------------------
+      # ------------------------------- IMF frame --------------------------------
 
       # The SFRD carries the IMF of the study that calibrated it, while
       # total_population_mass carries the IMF of the population synthesis. The
       # rate psi / M_SF is only meaningful with both in one frame, so psi is
-      # converted into population_IMF above.
+      # converted into population_IMF above. For more info, see imf.py.
       #
       # Native frame of the selected SFH model. null looks it up from SFH_name:
       #   madau_and_dickinson -> salpeter    madau_and_fragos -> kroupa
@@ -177,7 +176,7 @@ SFH:
       # Optional, default: "auto".
       SFH_IMF_correction: "auto"
 
-      # ---- numerical SFRD settings (only read for chruslinska_and_nelemans) --
+      # --- numerical SFRD settings (only read for chruslinska_and_nelemans) ---
 
       # Either the directory holding the data files together with
       # Time_redshift_deltaT.dat (then SFRD_model selects the file), or a direct
@@ -203,7 +202,7 @@ SFH:
       # "Villante14" (0.019, 8.85). Optional, default: "AndersGrevesse89".
       SFH_solar_Z_scale: "AndersGrevesse89"
 
-      # ---- metallicity grid ---------------------------------------------------
+      # --------------------------- metallicity grid ----------------------------
 
       # The metallicities (mass fraction Z) the background is computed on.
       # A single value (or a one-element list) selects the single-Z path, which
