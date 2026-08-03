@@ -6,9 +6,6 @@ requires-python = ">=3.12"
 license = "Apache-2.0"
 license-files = ["LICENSE.txt"]
 dynamic = ["version"]
-# Every package imported by src/lisaastrophysicalbackgrounds, and nothing else.
-# The package itself is numpy-free (jnp throughout); numpy still arrives in the
-# environment as a transitive dependency of jax, pandas and astropy.
 dependencies = [
     "astropy>=7.2.0",
     "h5py>=3.15.1",
@@ -29,8 +26,6 @@ cuda13x = [
 ]
 
 [dependency-groups]
-# ipykernel powers scripts/example_run.ipynb and numpy is used by the tests;
-# neither is imported by the package itself, so they stay out of the wheel.
 dev = [
     "ipykernel>=7.2.0",
     "numpy>=2.0",
@@ -44,16 +39,13 @@ build-backend = "hatchling.build"
 [tool.hatch.version]
 path = "src/lisaastrophysicalbackgrounds/__init__.py"
 
-# Keep the source distribution to the package itself: the binary catalogues and the
-# stored results are repository material, not something a `pip install` needs. Without
-# this the sdist is ~98 MB, almost all of it DWDs_vanHaaften_reduced.csv.gz.
 [tool.hatch.build.targets.sdist]
 exclude = [
     "/data/populations",
     "/results",
 ]
 
-# restric dependencies if jax is giving issues on GPU
+# restrict dependencies if jax is giving issues on GPU, e.g., on specific clusters
 # [tool.uv]
 # override-dependencies = [
 #     "nvidia-cublas-cu12; sys_platform == 'never'",
