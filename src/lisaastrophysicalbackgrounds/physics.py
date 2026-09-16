@@ -1,4 +1,15 @@
-"""Physics utility equations for computing gravitational wave binary populations."""
+"""Physics utility equations for computing gravitational wave binary populations.
+
+Two year definitions are used here, because they play different roles. ``YRSID_SI``
+is the sidereal year of the LISA constants, and is what the Omega pre-factor in
+``gravitational_wave_background.py`` is built from, alongside the ``1e10`` there that
+carries the km to m conversion in H0, squared. ``YRJUL_SI`` is the Julian year,
+and is the one the pipeline's Myr must be based on: every time in Myr is used
+against quantities that are themselves Julian, namely the catalogue's ``t0``, the
+ages and lookback times from astropy, and the SFRD, which is quoted per Julian year
+and which the kernels multiply by ``tau * 1e6``. Basing the Myr on the sidereal year
+instead left every delay time 1.742e-5 out of step with LAB's own cosmological ages.
+"""
 
 import jax
 import jax.numpy as jnp
@@ -8,6 +19,8 @@ G_SI: float = lc.GRAVITATIONAL_CONSTANT
 MSUN_SI: float = lc.SOLAR_MASS
 C_SI: float = lc.SPEED_OF_LIGHT
 YRSID_SI: float = lc.ASTRONOMICAL_YEAR
+# Julian year, the year astropy's Myr and the SFRD are based on. See module docstring.
+YRJUL_SI: float = 365.25 * 86400.0
 
 # Nominal solar radius in meters (agrees with astropy and wolframalpha value)
 RSUN_SI: float = 695700000.0
@@ -16,7 +29,7 @@ KEPLER_CONST: float = (G_SI * MSUN_SI / (RSUN_SI**3)) ** (1 / 2) / (2.0 * jnp.pi
 GW_TIME_CONST: float = (
     (96 / 5) * (2 * jnp.pi) ** (8 / 3) * (G_SI * MSUN_SI) ** (5 / 3) / (C_SI**5)
 )
-TAU_IN_MYR_CONST: float = 1 / (1e6 * YRSID_SI)
+TAU_IN_MYR_CONST: float = 1 / (1e6 * YRJUL_SI)
 
 
 @jax.jit
